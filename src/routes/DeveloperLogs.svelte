@@ -39,7 +39,7 @@
 </script>
 
 <DeveloperLogViewer
-  title="Engine logs"
+  title="Nhật ký động cơ"
   {engines}
   bind:selectedEngineId
   bind:logType

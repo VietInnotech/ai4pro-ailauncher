@@ -49,7 +49,7 @@ impl EngineManager {
         let profile = self
             .db
             .load_engine_profile(id)?
-            .ok_or_else(|| AppError::new("ENGINE_NOT_FOUND", "Engine profile not found."))?;
+            .ok_or_else(|| AppError::new("ENGINE_NOT_FOUND", "Không tìm thấy hồ sơ động cơ."))?;
         self.to_developer_dto(profile)
     }
 
@@ -62,7 +62,7 @@ impl EngineManager {
         let mut profile = self
             .db
             .load_engine_profile(id)?
-            .ok_or_else(|| AppError::new("ENGINE_NOT_FOUND", "Engine profile not found."))?;
+            .ok_or_else(|| AppError::new("ENGINE_NOT_FOUND", "Không tìm thấy hồ sơ động cơ."))?;
 
         if let Some(name) = input.name {
             profile.name = name;
@@ -125,13 +125,13 @@ impl EngineManager {
         let profile = self
             .db
             .load_engine_profile(id)?
-            .ok_or_else(|| AppError::new("ENGINE_NOT_FOUND", "Engine profile not found."))?;
+            .ok_or_else(|| AppError::new("ENGINE_NOT_FOUND", "Không tìm thấy hồ sơ động cơ."))?;
         let mut validation = validate_profile(&profile, &self.paths.app_root)?;
         if !ports::port_is_available(profile.port) && profile.status == EngineStatus::Stopped {
             validation.issues.push(ValidationIssueDto {
                 severity: "error".to_string(),
                 code: "PORT_IN_USE".to_string(),
-                message: format!("Port {} is already in use on 127.0.0.1.", profile.port),
+                message: format!("Cổng {} đã được sử dụng trên 127.0.0.1.", profile.port),
             });
             validation.valid = false;
         }
@@ -145,7 +145,7 @@ impl EngineManager {
             .list_model_packages()?
             .into_iter()
             .find(|package| package.id == id)
-            .ok_or_else(|| AppError::new("MODEL_PACKAGE_NOT_FOUND", "Model package not found."))?;
+            .ok_or_else(|| AppError::new("MODEL_PACKAGE_NOT_FOUND", "Không tìm thấy gói mô hình."))?;
 
         let resolved = self.resolve_model_package_path(&package);
         let mut issues = Vec::new();
@@ -244,14 +244,14 @@ impl EngineManager {
         let profile = self
             .db
             .load_engine_profile(id)?
-            .ok_or_else(|| AppError::new("ENGINE_NOT_FOUND", "Engine profile not found."))?;
+            .ok_or_else(|| AppError::new("ENGINE_NOT_FOUND", "Không tìm thấy hồ sơ động cơ."))?;
 
         let validation = self.validate_engine_profile(&profile.id)?;
         if !validation.valid {
-            return Err(AppError::new("INVALID_CONFIG", "Engine profile validation failed."));
+            return Err(AppError::new("INVALID_CONFIG", "Hồ sơ động cơ không vượt qua kiểm tra."));
         }
         if !ports::port_is_available(profile.port) {
-            return Err(AppError::new("PORT_IN_USE", "Port is already in use."));
+            return Err(AppError::new("PORT_IN_USE", "Cổng đã được sử dụng."));
         }
 
         let mut updated = profile.clone();
@@ -334,8 +334,8 @@ impl EngineManager {
         if enabled_profiles.is_empty() {
             return Ok(SimpleLocalAiStatusDto {
                 status: SimpleLocalAiStatus::NeedsAttention,
-                title: "Local AI is not ready".to_string(),
-                message: "Local AI is not configured. Please contact support.".to_string(),
+                title: "Local AI chưa sẵn sàng".to_string(),
+                message: "Local AI chưa được cấu hình. Vui lòng liên hệ bộ phận hỗ trợ.".to_string(),
                 can_start: false,
                 can_stop: false,
                 can_restart: true,
@@ -367,8 +367,8 @@ impl EngineManager {
         let dto = if running == enabled_profiles.len() {
             SimpleLocalAiStatusDto {
                 status: SimpleLocalAiStatus::Ready,
-                title: "Local AI is running".to_string(),
-                message: "The local AI service is available.".to_string(),
+                title: "Local AI đang hoạt động".to_string(),
+                message: "Dịch vụ Local AI hiện khả dụng.".to_string(),
                 can_start: false,
                 can_stop: true,
                 can_restart: true,
@@ -376,8 +376,8 @@ impl EngineManager {
         } else if stopping {
             SimpleLocalAiStatusDto {
                 status: SimpleLocalAiStatus::Stopping,
-                title: "Local AI is stopping".to_string(),
-                message: "Please wait...".to_string(),
+                title: "Local AI đang dừng".to_string(),
+                message: "Vui lòng chờ...".to_string(),
                 can_start: false,
                 can_stop: false,
                 can_restart: false,
@@ -385,8 +385,8 @@ impl EngineManager {
         } else if starting || running > 0 {
             SimpleLocalAiStatusDto {
                 status: SimpleLocalAiStatus::Starting,
-                title: "Local AI is starting".to_string(),
-                message: "Please wait...".to_string(),
+                title: "Local AI đang khởi động".to_string(),
+                message: "Vui lòng chờ...".to_string(),
                 can_start: false,
                 can_stop: true,
                 can_restart: false,
@@ -394,8 +394,8 @@ impl EngineManager {
         } else if needs_attention {
             SimpleLocalAiStatusDto {
                 status: SimpleLocalAiStatus::NeedsAttention,
-                title: "Local AI needs attention".to_string(),
-                message: "Local AI could not start. Please contact support.".to_string(),
+                title: "Local AI cần được chú ý".to_string(),
+                message: "Không thể khởi động Local AI. Vui lòng liên hệ bộ phận hỗ trợ.".to_string(),
                 can_start: false,
                 can_stop: false,
                 can_restart: true,
@@ -403,8 +403,8 @@ impl EngineManager {
         } else {
             SimpleLocalAiStatusDto {
                 status: SimpleLocalAiStatus::NotRunning,
-                title: "Local AI is ready".to_string(),
-                message: "The local AI service is available when you need it.".to_string(),
+                title: "Local AI đã sẵn sàng".to_string(),
+                message: "Dịch vụ Local AI luôn sẵn sàng khi bạn cần.".to_string(),
                 can_start: true,
                 can_stop: false,
                 can_restart: false,
@@ -718,6 +718,6 @@ fn missing_model_issue(required: &str) -> ValidationIssueDto {
     ValidationIssueDto {
         severity: "error".to_string(),
         code: "MISSING_MODEL".to_string(),
-        message: format!("Required model file is unavailable: {required}"),
+        message: format!("Tệp mô hình bắt buộc hiện không khả dụng: {required}"),
     }
 }

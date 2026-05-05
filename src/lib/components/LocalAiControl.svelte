@@ -8,16 +8,16 @@
   export let onRestart: () => void | Promise<void> = () => {};
 </script>
 
-<div class="flex flex-col items-center gap-3 sm:flex-row sm:justify-center">
+<div class="flex w-full flex-col items-stretch gap-3 sm:w-auto sm:flex-row sm:items-center sm:justify-center">
   {#if canStart}
-    <button class="action-button-primary min-w-36" disabled={busy} on:click={onStart}>Start</button>
+    <button class="action-button-primary min-w-36" disabled={busy} on:click={onStart}>Bắt đầu</button>
   {/if}
 
   {#if canStop}
-    <button class="action-button-danger min-w-36" disabled={busy} on:click={onStop}>Stop</button>
+    <button class="action-button-danger min-w-36" disabled={busy} on:click={onStop}>Dừng</button>
   {/if}
 
   {#if canRestart}
-    <button class="action-button-secondary min-w-36" disabled={busy} on:click={onRestart}>Restart</button>
+    <button class="action-button-secondary min-w-36" disabled={busy} on:click={onRestart}>Khởi động lại</button>
   {/if}
 </div>

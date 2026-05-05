@@ -9,7 +9,8 @@ use crate::process_supervisor::LaunchSpec;
 pub trait EngineAdapter {
     fn kind(&self) -> EngineKind;
     fn binary_name(&self) -> &'static str;
-    fn launch_spec(&self, paths: &AppPaths, profile: &EngineProfileRecord) -> AppResult<LaunchSpec>;
+    fn launch_spec(&self, paths: &AppPaths, profile: &EngineProfileRecord)
+        -> AppResult<LaunchSpec>;
 }
 
 pub fn adapter_for(kind: &EngineKind) -> Box<dyn EngineAdapter + Send + Sync> {
@@ -19,7 +20,11 @@ pub fn adapter_for(kind: &EngineKind) -> Box<dyn EngineAdapter + Send + Sync> {
     }
 }
 
-pub fn resolve_binary_path(paths: &AppPaths, profile: &EngineProfileRecord, adapter: &dyn EngineAdapter) -> std::path::PathBuf {
+pub fn resolve_binary_path(
+    paths: &AppPaths,
+    profile: &EngineProfileRecord,
+    adapter: &dyn EngineAdapter,
+) -> std::path::PathBuf {
     match profile.binary_mode {
         BinaryMode::Custom => profile
             .binary_path
@@ -27,5 +32,14 @@ pub fn resolve_binary_path(paths: &AppPaths, profile: &EngineProfileRecord, adap
             .map(std::path::PathBuf::from)
             .unwrap_or_else(|| paths.bundled_binary_path(adapter.binary_name())),
         BinaryMode::Bundled => paths.bundled_binary_path(adapter.binary_name()),
+    }
+}
+
+pub fn resolve_relative_or_absolute(app_root: &std::path::Path, value: &str) -> std::path::PathBuf {
+    let path = std::path::PathBuf::from(value);
+    if path.is_absolute() {
+        path
+    } else {
+        app_root.join(path)
     }
 }

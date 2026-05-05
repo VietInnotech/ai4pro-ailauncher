@@ -76,7 +76,7 @@ cd src-tauri && cargo check
 
 ### Engine integration
 
-`llama.cpp` and `sherpa-onnx` are represented in the codebase, but the launcher is not yet validated against real binaries and real model folders end-to-end.
+`llama.cpp` and `sherpa-onnx` are represented in the codebase, but the launcher is not yet validated against real llama binaries, real sherpa Python runtimes, and real model folders end-to-end.
 
 Current state:
 
@@ -87,24 +87,21 @@ Current state:
 - real engine artifacts are not present in `src-tauri/binaries/`
 - start/stop/restart are not verified against real engines
 
-### Sherpa contract mismatch
+### Sherpa runtime packaging still incomplete
 
-This is the largest current mismatch.
+The repo now treats `sherpa-onnx-vit` as a Python program, not a native sherpa binary.
 
-`plan.md` and `FINISHING_IMPLEMENTATION.md` now treat sherpa as Option A:
+Current state:
 
-- `sherpa-onnx-vit-server`
-- or `python -m sherpa_onnx_vit`
+- adapter defaults launch `python -m sherpa_onnx_vit`
+- default engine profile seed data points at a Python runtime
+- layout/scripts document a packaged sherpa runtime instead of native sherpa sidecars
 
-Current code still assumes native `sherpa-onnx-server*` sidecars in multiple places, including:
+Still missing:
 
-- `src-tauri/src/adapters/sherpa_onnx.rs`
-- default engine profile seed data in `src-tauri/src/db.rs`
-- `src-tauri/binaries/expected-layout.md`
-- `scripts/prepare-sidecars.*`
-- `scripts/build-sherpa-onnx.*`
-
-No Python runtime or packaged-artifact strategy is implemented yet.
+- a real packaged Python runtime under `src-tauri/runtime/sherpa-onnx-vit/`
+- a validated developer-managed Python setup path
+- end-to-end launch validation against a real sherpa runtime and model directory
 
 ### Process lifecycle
 

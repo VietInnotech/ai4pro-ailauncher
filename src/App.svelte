@@ -22,8 +22,15 @@
   import DeveloperSettings from "$routes/DeveloperSettings.svelte";
   import SimpleHome from "$routes/SimpleHome.svelte";
 
-  const developerViews = ["dashboard", "engines", "models", "logs", "settings", "diagnostics"] as const;
-  type DeveloperView = (typeof developerViews)[number];
+  const developerViews = [
+    { id: "dashboard", label: "Tổng quan" },
+    { id: "engines", label: "Động cơ" },
+    { id: "models", label: "Mô hình" },
+    { id: "logs", label: "Nhật ký" },
+    { id: "settings", label: "Cài đặt" },
+    { id: "diagnostics", label: "Chẩn đoán" }
+  ] as const;
+  type DeveloperView = (typeof developerViews)[number]["id"];
 
   let devEnabled = false;
   let engines: DeveloperEngineProfileDto[] = [];
@@ -35,7 +42,7 @@
   const unsubscribe = developerMode.subscribe((value) => {
     devEnabled = value;
     if (value) {
-      developerNotice = "Developer Mode enabled. Advanced settings and diagnostics are now visible.";
+      developerNotice = "Chế độ nhà phát triển đã được bật. Các cài đặt nâng cao và chẩn đoán hiện đã hiển thị.";
       void loadDeveloperData();
     }
   });
@@ -56,14 +63,14 @@
       models = loadedModels;
       diagnostics = loadedDiagnostics;
     } catch (error) {
-      developerNotice = error instanceof Error ? error.message : "Failed to load developer data.";
+      developerNotice = error instanceof Error ? error.message : "Không thể tải dữ liệu dành cho nhà phát triển.";
     }
   }
 
   async function disableDeveloperMode() {
     await disableDeveloperModeForSession();
     developerMode.set(false);
-    developerNotice = "Developer Mode disabled for this session.";
+    developerNotice = "Chế độ nhà phát triển đã bị tắt cho phiên này.";
   }
 
   function setActiveView(view: DeveloperView) {
@@ -72,30 +79,30 @@
 </script>
 
 <svelte:head>
-  <title>AI Launcher</title>
+  <title>Trình khởi chạy AI</title>
 </svelte:head>
 
-<div class="min-h-screen bg-gradient-to-b from-slate-100 to-slate-200 px-6 py-10 text-slate-900">
-  <div class="mx-auto flex max-w-6xl flex-col gap-8">
+<div class="min-h-screen px-4 py-8 text-[#1b2430] sm:px-6 lg:px-8">
+  <div class="mx-auto flex max-w-6xl flex-col gap-6">
     <SimpleHome />
 
     <DeveloperModeGate enabled={devEnabled}>
       <section class="space-y-4">
-        <div class="flex items-center justify-between gap-4 rounded-2xl border border-indigo-200 bg-indigo-50 px-5 py-4 text-sm text-indigo-900">
+        <div class="panel flex flex-col gap-3 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
           <span>{developerNotice}</span>
           <div class="flex gap-2">
-            <button class="action-button-secondary" on:click={loadDeveloperData}>Refresh developer data</button>
-            <button class="action-button-secondary" on:click={disableDeveloperMode}>Hide developer tools</button>
+            <button class="action-button-secondary" on:click={loadDeveloperData}>Làm mới dữ liệu nhà phát triển</button>
+            <button class="action-button-secondary" on:click={disableDeveloperMode}>Ẩn công cụ nhà phát triển</button>
           </div>
         </div>
 
         <div class="flex flex-wrap gap-2">
           {#each developerViews as view}
             <button
-              class={`rounded-full px-4 py-2 text-sm font-semibold transition ${activeView === view ? "bg-slate-900 text-white" : "bg-white text-slate-600 hover:bg-slate-50"}`}
-              on:click={() => setActiveView(view)}
+              class={`rounded-full border px-4 py-2 text-sm font-semibold transition ${activeView === view.id ? "border-[#1b2430] bg-[#1b2430] text-white" : "border-[#d5dce3] bg-[#fcfcfd] text-[#5e6a79] hover:bg-[#eef2f5]"}`}
+              on:click={() => setActiveView(view.id)}
             >
-              {view}
+              {view.label}
             </button>
           {/each}
         </div>

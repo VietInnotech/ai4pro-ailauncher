@@ -81,28 +81,28 @@
     />
 
     <section class="panel p-6">
-      <h3 class="text-base font-semibold text-slate-950">Validation</h3>
+      <h3 class="text-base font-semibold text-[#1b2430]">Kiểm tra</h3>
       {#if validationError}
-        <p class="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{validationError}</p>
+        <p class="mt-3 rounded-md border px-3 py-2 text-sm text-[#9a3d3d]" style="border-color: #efcaca; background-color: #fbebeb;">{validationError}</p>
       {:else if validation}
         <div class="mt-3 space-y-3">
-          <p class={`text-sm font-medium ${validation.valid ? "text-emerald-700" : "text-amber-700"}`}>
-            {validation.valid ? "Profile is valid." : "Profile has issues."}
+          <p class={`text-sm font-medium ${validation.valid ? "text-[#2f6b57]" : "text-[#8a6431]"}`}>
+            {validation.valid ? "Hồ sơ hợp lệ." : "Hồ sơ có vấn đề."}
           </p>
           {#if validation.issues.length > 0}
-            <ul class="space-y-2 text-sm text-slate-600">
+            <ul class="space-y-2 text-sm text-[#5e6a79]">
               {#each validation.issues as issue}
-                <li class="rounded-xl border border-slate-200 px-3 py-2">
-                  <span class="font-medium text-slate-900">{issue.code}</span>: {issue.message}
+                <li class="rounded-md border px-3 py-2" style="border-color: #d5dce3;">
+                  <span class="font-medium text-[#1b2430]">{issue.code}</span>: {issue.message}
                 </li>
               {/each}
             </ul>
           {:else}
-            <p class="text-sm text-slate-500">No validation issues found.</p>
+            <p class="text-sm text-[#5e6a79]">Không phát hiện vấn đề kiểm tra nào.</p>
           {/if}
         </div>
       {:else}
-        <p class="mt-3 text-sm text-slate-500">Select an engine and run validation to inspect launch readiness.</p>
+        <p class="mt-3 text-sm text-[#5e6a79]">Chọn một động cơ và chạy kiểm tra để xem mức độ sẵn sàng khởi chạy.</p>
       {/if}
     </section>
   </div>

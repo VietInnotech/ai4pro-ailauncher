@@ -28,28 +28,28 @@
   <DeveloperModelTable {models} selectedId={selectedModelId} on:validate={(event) => validateModel(event.detail)} />
 
   <section class="panel p-6">
-    <h3 class="text-base font-semibold text-slate-950">Model validation</h3>
+    <h3 class="text-base font-semibold text-[#1b2430]">Kiểm tra mô hình</h3>
     {#if validationError}
-      <p class="mt-3 rounded-xl border border-red-200 bg-red-50 px-3 py-2 text-sm text-red-700">{validationError}</p>
+      <p class="mt-3 rounded-md border px-3 py-2 text-sm text-[#9a3d3d]" style="border-color: #efcaca; background-color: #fbebeb;">{validationError}</p>
     {:else if validation}
       <div class="mt-3 space-y-3">
-        <p class={`text-sm font-medium ${validation.valid ? "text-emerald-700" : "text-amber-700"}`}>
-          {validation.valid ? "Model package is valid." : "Model package has issues."}
+        <p class={`text-sm font-medium ${validation.valid ? "text-[#2f6b57]" : "text-[#8a6431]"}`}>
+          {validation.valid ? "Gói mô hình hợp lệ." : "Gói mô hình có vấn đề."}
         </p>
         {#if validation.issues.length > 0}
-          <ul class="space-y-2 text-sm text-slate-600">
+          <ul class="space-y-2 text-sm text-[#5e6a79]">
             {#each validation.issues as issue}
-              <li class="rounded-xl border border-slate-200 px-3 py-2">
-                <span class="font-medium text-slate-900">{issue.code}</span>: {issue.message}
+              <li class="rounded-md border px-3 py-2" style="border-color: #d5dce3;">
+                <span class="font-medium text-[#1b2430]">{issue.code}</span>: {issue.message}
               </li>
             {/each}
           </ul>
         {:else}
-          <p class="text-sm text-slate-500">All required files are present.</p>
+          <p class="text-sm text-[#5e6a79]">Tất cả các tệp bắt buộc đều có mặt.</p>
         {/if}
       </div>
     {:else}
-      <p class="mt-3 text-sm text-slate-500">Run a model validation to inspect the pinned file contract.</p>
+      <p class="mt-3 text-sm text-[#5e6a79]">Chạy kiểm tra mô hình để xem cấu trúc tệp bắt buộc đã ghim.</p>
     {/if}
   </section>
 </section>

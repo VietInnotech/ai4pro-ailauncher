@@ -34,7 +34,7 @@ What exists today:
 
 What does **not** exist yet:
 
-- real bundled engine binaries
+- real bundled engine artifacts/runtimes
 - production-complete health checks
 - production-complete machine initialization
 - complete runtime reconciliation / crash recovery / graceful shutdown behavior
@@ -173,6 +173,7 @@ The scaffold resolves an app data root and creates:
   logs/
   models/
   binaries/
+  runtime/
 ```
 
 Current default roots:
@@ -187,20 +188,19 @@ Override with:
 LOCAL_AI_APP_DATA_ROOT=/custom/path
 ```
 
-## Sidecar binaries
+## Bundled engine artifacts
 
-Production intent is to bundle sidecars under:
+Production intent is split by engine type:
 
-```text
-src-tauri/binaries/
-```
+- native `llama.cpp` sidecars under `src-tauri/binaries/`
+- packaged `sherpa-onnx-vit` Python runtime under `src-tauri/runtime/sherpa-onnx-vit/`
 
-Expected filenames are documented in:
+Expected layouts are documented in:
 
 - `src-tauri/binaries/README.md`
 - `src-tauri/binaries/expected-layout.md`
 
-No real binaries are committed yet.
+No real binaries or runtimes are committed yet.
 
 ## Scripts
 
@@ -223,7 +223,7 @@ Current scripts are **developer-facing scaffolds**, not full automation.
 They currently help with:
 
 - previewing/applying directory layouts
-- checking expected sidecar names
+- checking expected llama sidecar names and sherpa runtime layout
 - documenting manual build expectations
 
 They do **not** yet fully implement machine provisioning from the plan.
@@ -231,9 +231,9 @@ They do **not** yet fully implement machine provisioning from the plan.
 ## Important caveats
 
 1. The app is still **MVP scaffold quality**, not release quality.
-2. `sherpa-onnx` integration is still partially speculative because the exact referenced server repo/binary contract in `plan.md` is not fully confirmed.
+2. `sherpa-onnx` integration is still partially speculative because the exact referenced Python program/runtime contract in `plan.md` is not fully confirmed.
 3. Health checks and process lifecycle handling are not yet production-complete.
-4. Simple Mode UX is present, but the real end-to-end experience still depends on adding actual engine binaries and validating runtime behavior.
+4. Simple Mode UX is present, but the real end-to-end experience still depends on adding actual engine artifacts and validating runtime behavior.
 
 ## Recommended next read
 

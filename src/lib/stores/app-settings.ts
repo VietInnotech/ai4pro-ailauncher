@@ -16,7 +16,7 @@ function errorMessage(error: unknown): string {
     return error.message;
   }
 
-  return "Unexpected error";
+  return "Lỗi không mong đợi";
 }
 
 function createAppSettingsStore() {

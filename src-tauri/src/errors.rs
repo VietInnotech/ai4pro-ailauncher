@@ -32,19 +32,19 @@ impl AppError {
     }
 
     pub fn developer_mode_required() -> Self {
-        Self::new("DEVELOPER_MODE_REQUIRED", "Developer Mode is not enabled.")
+        Self::new("DEVELOPER_MODE_REQUIRED", "Chế độ nhà phát triển chưa được bật.")
     }
 
     pub fn safe_generic() -> Self {
-        Self::new("UNKNOWN_ERROR", "Local AI is unavailable right now.")
+        Self::new("UNKNOWN_ERROR", "Local AI hiện không khả dụng.")
     }
 
     pub fn to_safe(self) -> Self {
         match self.code.as_str() {
             "ENGINE_NOT_FOUND" | "MISSING_BINARY" | "MISSING_MODEL" => {
-                Self::new(self.code, "Required AI files are missing.")
+                Self::new(self.code, "Thiếu các tệp AI bắt buộc.")
             }
-            "PORT_IN_USE" => Self::new(self.code, "Local AI could not start."),
+            "PORT_IN_USE" => Self::new(self.code, "Không thể khởi động Local AI."),
             "DEVELOPER_MODE_REQUIRED" => self,
             _ => Self::safe_generic(),
         }

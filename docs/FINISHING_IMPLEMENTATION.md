@@ -41,12 +41,10 @@ cd src-tauri && cargo check
 
 These are the real blockers in the current repo state:
 
-1. **Sherpa contract mismatch**
-   - `plan.md` now treats sherpa as Option A:
-     - `sherpa-onnx-vit-server`
-     - or `python -m sherpa_onnx_vit`
-   - current code and scripts still assume native `sherpa-onnx-server*` sidecars
-2. **No real engine artifacts are present** in `src-tauri/binaries/`
+1. **Sherpa runtime strategy is not finished**
+   - `sherpa-onnx-vit` must be treated as a Python program
+   - the repo still needs a real packaged runtime or a validated developer-managed Python path
+2. **No real engine artifacts are present** in `src-tauri/binaries/` or `src-tauri/runtime/`
 3. **Health checks are minimal**
    - `src-tauri/src/health.rs` only does a TCP connect probe
 4. **Process supervision is incomplete**
@@ -109,7 +107,8 @@ After verification, update the repo assumptions in:
 For this repo, keep **Option A** as the intended target until proven otherwise:
 
 - upstream repo: `https://github.com/VietInnotech/sherpa-onnx-vit.git`
-- launch shape: `sherpa-onnx-vit-server` or `python -m sherpa_onnx_vit`
+- preferred launch shape: `python -m sherpa_onnx_vit`
+- optional upstream wrapper: `sherpa-onnx-vit-server` (console-script wrapper)
 
 Validate against the real upstream project, not a placeholder assumption.
 Pin one verified upstream Git commit for implementation and packaging notes.
@@ -123,7 +122,7 @@ Use the upstream repo itself as the source of truth:
 
 Required contract decisions:
 
-- exact executable shape
+- exact Python launch shape
 - exact argv contract
 - HTTP endpoints actually present
 - whether `/v1/audio/streaming` requires explicit streaming mode
@@ -164,7 +163,7 @@ The default path should stay model-dir-first.
 ### Required caveat
 
 Option A is **not** a native sidecar binary contract.
-It is a Python/FastAPI server package with runtime dependencies.
+It is a Python/FastAPI server program with runtime dependencies.
 
 Treat that as a release blocker unless one of these is true:
 
@@ -568,7 +567,7 @@ Use this as the conservative release checklist.
 
 The next concrete steps should be:
 
-1. pin one real `VietInnotech/sherpa-onnx-vit` commit and choose whether the launcher calls `sherpa-onnx-vit-server` or `python -m sherpa_onnx_vit`
+1. pin one real `VietInnotech/sherpa-onnx-vit` commit and keep the launcher on `python -m sherpa_onnx_vit` unless a wrapper is intentionally introduced
 2. replace the current native `sherpa-onnx-server*` assumptions in code, defaults, and scripts
 3. place one real `llama-server` binary locally and prepare one real sherpa model directory for the pinned family
 4. update health checks from TCP-only probes to real HTTP readiness checks

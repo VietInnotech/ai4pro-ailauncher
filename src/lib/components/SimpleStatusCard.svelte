@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { formatSimpleStatusLabel } from "$lib/labels";
   import StatusBadge from "$lib/components/StatusBadge.svelte";
   import LocalAiControl from "$lib/components/LocalAiControl.svelte";
   import SimpleErrorMessage from "$lib/components/SimpleErrorMessage.svelte";
@@ -21,20 +22,20 @@
   };
 </script>
 
-<section class="panel mx-auto flex w-full max-w-2xl flex-col items-center gap-8 px-8 py-12 text-center">
+<section class="panel mx-auto flex w-full max-w-xl flex-col items-center gap-7 px-6 py-10 text-center sm:px-8">
   <button
-    class="flex h-20 w-20 items-center justify-center rounded-[28px] border border-slate-200 bg-slate-900 text-2xl font-black tracking-[0.2em] text-white"
-    aria-label="App logo"
+    class="flex h-16 w-16 items-center justify-center rounded-lg border border-[#d5dce3] bg-[#1b2430] text-lg font-bold tracking-[0.12em] text-white transition hover:bg-[#263241]"
+    aria-label="Logo ứng dụng"
     on:click={onLogoClick}
   >
     AI
   </button>
 
   <div class="space-y-4">
-    <StatusBadge tone={badgeTone[status.status]} text={status.status.replaceAll("_", " ")} />
+    <StatusBadge tone={badgeTone[status.status]} text={formatSimpleStatusLabel(status.status)} />
     <div class="space-y-2">
-      <h1 class="text-3xl font-semibold tracking-tight text-slate-950">{status.title}</h1>
-      <p class="max-w-lg text-base leading-7 text-slate-600">{status.message}</p>
+      <h1 class="text-[32px] font-semibold leading-tight text-[#1b2430]">{status.title}</h1>
+      <p class="max-w-md text-sm leading-6 text-[#5e6a79]">{status.message}</p>
     </div>
   </div>
 
@@ -49,14 +50,14 @@
   />
 
   {#if busy}
-    <p class="text-sm font-medium text-slate-500">Please wait...</p>
+    <p class="text-sm font-medium text-[#5e6a79]">Vui lòng chờ...</p>
   {/if}
 
   <div class="w-full max-w-lg space-y-3">
     <SimpleErrorMessage message={notice} />
     {#if status.status === "needs_attention"}
-      <button class="text-sm font-semibold text-slate-500 underline-offset-4 hover:text-slate-700 hover:underline">
-        Contact support
+      <button class="text-sm font-semibold text-[#5e6a79] underline-offset-4 hover:text-[#1b2430] hover:underline">
+        Liên hệ bộ phận hỗ trợ
       </button>
     {/if}
   </div>

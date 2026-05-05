@@ -1,4 +1,4 @@
-use super::{EngineAdapter, resolve_binary_path};
+use super::{resolve_binary_path, resolve_relative_or_absolute, EngineAdapter};
 use crate::app_paths::AppPaths;
 use crate::errors::{AppError, AppResult};
 use crate::models::{EngineKind, EngineProfileRecord};
@@ -16,12 +16,21 @@ impl EngineAdapter for LlamaCppAdapter {
         current_binary_name("llama-server")
     }
 
-    fn launch_spec(&self, paths: &AppPaths, profile: &EngineProfileRecord) -> AppResult<LaunchSpec> {
+    fn launch_spec(
+        &self,
+        paths: &AppPaths,
+        profile: &EngineProfileRecord,
+    ) -> AppResult<LaunchSpec> {
         let binary_path = resolve_binary_path(paths, profile, self);
         let model_path = profile
             .model_path
-            .clone()
-            .ok_or_else(|| AppError::new("MISSING_MODEL", "A model path is required."))?;
+            .as_deref()
+            .map(|path| {
+                resolve_relative_or_absolute(&paths.app_root, path)
+                    .to_string_lossy()
+                    .to_string()
+            })
+            .ok_or_else(|| AppError::new("MISSING_MODEL", "Cần có đường dẫn mô hình."))?;
 
         Ok(LaunchSpec {
             id: profile.id.clone(),
@@ -41,7 +50,11 @@ impl EngineAdapter for LlamaCppAdapter {
 }
 
 fn current_binary_name(base: &str) -> &'static str {
-    match (cfg!(target_os = "windows"), cfg!(target_arch = "aarch64"), cfg!(target_os = "macos")) {
+    match (
+        cfg!(target_os = "windows"),
+        cfg!(target_arch = "aarch64"),
+        cfg!(target_os = "macos"),
+    ) {
         (true, _, _) => Box::leak(format!("{base}.exe").into_boxed_str()),
         (false, true, true) => "llama-server-aarch64-apple-darwin",
         (false, false, true) => "llama-server-x86_64-apple-darwin",

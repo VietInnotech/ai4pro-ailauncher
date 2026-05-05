@@ -1,4 +1,4 @@
-use super::EngineAdapter;
+use super::{resolve_relative_or_absolute, EngineAdapter};
 use crate::app_paths::AppPaths;
 use crate::errors::{AppError, AppResult};
 use crate::models::{EngineKind, EngineProfileRecord};
@@ -21,13 +21,22 @@ impl EngineAdapter for SherpaOnnxAdapter {
         }
     }
 
-    fn launch_spec(&self, paths: &AppPaths, profile: &EngineProfileRecord) -> AppResult<LaunchSpec> {
+    fn launch_spec(
+        &self,
+        paths: &AppPaths,
+        profile: &EngineProfileRecord,
+    ) -> AppResult<LaunchSpec> {
         let runtime = &profile.runtime;
         let model_dir = profile
             .model_dir
-            .clone()
-            .or(profile.model_path.clone())
-            .ok_or_else(|| AppError::new("INVALID_MODEL_DIR", "A sherpa model directory is required."))?;
+            .as_deref()
+            .or(profile.model_path.as_deref())
+            .map(|path| {
+                resolve_relative_or_absolute(&paths.app_root, path)
+                    .to_string_lossy()
+                    .to_string()
+            })
+            .ok_or_else(|| AppError::new("INVALID_MODEL_DIR", "Cần có thư mục mô hình Sherpa."))?;
         let provider = runtime
             .get("provider")
             .and_then(|value| value.as_str())
@@ -44,7 +53,15 @@ impl EngineAdapter for SherpaOnnxAdapter {
             .get("alias")
             .and_then(|value| value.as_str())
             .unwrap_or(&profile.id);
-        let encoder = profile.model_path.clone().unwrap_or_default();
+        let encoder = profile
+            .model_path
+            .as_deref()
+            .map(|path| {
+                resolve_relative_or_absolute(&paths.app_root, path)
+                    .to_string_lossy()
+                    .to_string()
+            })
+            .unwrap_or_default();
         let decoder = runtime
             .get("modelDecoder")
             .and_then(|value| value.as_str())
@@ -53,7 +70,15 @@ impl EngineAdapter for SherpaOnnxAdapter {
             .get("modelJoiner")
             .and_then(|value| value.as_str())
             .unwrap_or("");
-        let tokens = profile.tokens_path.clone().unwrap_or_default();
+        let tokens = profile
+            .tokens_path
+            .as_deref()
+            .map(|path| {
+                resolve_relative_or_absolute(&paths.app_root, path)
+                    .to_string_lossy()
+                    .to_string()
+            })
+            .unwrap_or_default();
         let bpe = runtime
             .get("modelBpeVocab")
             .and_then(|value| value.as_str())
@@ -112,10 +137,17 @@ impl EngineAdapter for SherpaOnnxAdapter {
         args.extend(profile.extra_args.clone());
 
         let mut env = vec![];
-        if let Some(runtime_dir) = runtime.get("packagedRuntimeDir").and_then(|value| value.as_str()) {
+        if let Some(runtime_dir) = runtime
+            .get("packagedRuntimeDir")
+            .and_then(|value| value.as_str())
+        {
             let resolved = paths.app_root.join(runtime_dir);
             env.push((
-                if cfg!(target_os = "windows") { "PYTHONHOME".into() } else { "PYTHONPATH".into() },
+                if cfg!(target_os = "windows") {
+                    "PYTHONHOME".into()
+                } else {
+                    "PYTHONPATH".into()
+                },
                 resolved.to_string_lossy().to_string(),
             ));
         }
@@ -130,7 +162,11 @@ impl EngineAdapter for SherpaOnnxAdapter {
     }
 }
 
-fn runtime_python_binary(paths: &AppPaths, profile: &EngineProfileRecord, default_binary: &str) -> PathBuf {
+fn runtime_python_binary(
+    paths: &AppPaths,
+    profile: &EngineProfileRecord,
+    default_binary: &str,
+) -> PathBuf {
     if let Some(path) = &profile.binary_path {
         PathBuf::from(path)
     } else {

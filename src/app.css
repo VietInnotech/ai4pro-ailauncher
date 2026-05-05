@@ -3,9 +3,11 @@
 @tailwind utilities;
 
 :root {
-  color: #0f172a;
-  background: #e5e7eb;
+  color: #1b2430;
+  background: #eef2f5;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
 }
 
 html,
@@ -16,6 +18,9 @@ body,
 
 body {
   margin: 0;
+  background:
+    linear-gradient(180deg, rgba(252, 252, 253, 0.78), rgba(238, 242, 245, 0) 18rem),
+    #eef2f5;
 }
 
 button,
@@ -25,30 +30,130 @@ select {
   font: inherit;
 }
 
+button,
+select,
+input {
+  color: inherit;
+}
+
+button {
+  cursor: pointer;
+}
+
+button:disabled {
+  cursor: not-allowed;
+}
+
 .panel {
-  @apply rounded-3xl border border-slate-200 bg-white shadow-card;
+  @apply rounded-lg border bg-white shadow-panel;
+  border-color: #d5dce3;
+  background-color: #fcfcfd;
 }
 
 .field {
-  @apply w-full rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm text-slate-900 outline-none transition focus:border-accent-500 focus:ring-2 focus:ring-accent-500/20;
+  @apply w-full rounded-md border bg-white px-3 py-2 text-sm outline-none transition;
+  border-color: #d5dce3;
+  background-color: #fcfcfd;
+  color: #1b2430;
+}
+
+.field:hover {
+  border-color: #b8c3cf;
+}
+
+.field:focus {
+  border-color: #355c7d;
+  box-shadow: 0 0 0 3px rgba(53, 92, 125, 0.16);
 }
 
 .field-label {
-  @apply mb-1 block text-xs font-semibold uppercase tracking-[0.12em] text-slate-500;
+  @apply mb-1 block text-xs font-semibold uppercase tracking-[0.12em];
+  color: #5e6a79;
 }
 
 .action-button {
-  @apply inline-flex items-center justify-center rounded-xl px-4 py-2 text-sm font-semibold transition disabled:cursor-not-allowed disabled:opacity-50;
+  @apply inline-flex min-h-10 items-center justify-center rounded-md border px-4 py-2 text-sm font-semibold transition disabled:opacity-50;
 }
 
 .action-button-primary {
-  @apply action-button bg-accent-500 text-white hover:bg-accent-600;
+  @apply action-button border-transparent text-white;
+  background-color: #355c7d;
+}
+
+.action-button-primary:hover:not(:disabled) {
+  background-color: #29455f;
 }
 
 .action-button-secondary {
-  @apply action-button border border-slate-300 bg-white text-slate-800 hover:bg-slate-50;
+  @apply action-button;
+  border-color: #d5dce3;
+  background-color: #fcfcfd;
+  color: #1b2430;
+}
+
+.action-button-secondary:hover:not(:disabled) {
+  background-color: #eef2f5;
 }
 
 .action-button-danger {
-  @apply action-button bg-danger text-white hover:bg-red-700;
+  @apply action-button border-transparent text-white;
+  background-color: #9a3d3d;
+}
+
+.action-button-danger:hover:not(:disabled) {
+  background-color: #7d3333;
+}
+
+.action-button:focus-visible,
+.field:focus-visible,
+select:focus-visible,
+button:focus-visible {
+  outline: 2px solid rgba(53, 92, 125, 0.35);
+  outline-offset: 2px;
+}
+
+.status-badge {
+  @apply inline-flex rounded-full border px-2.5 py-1 text-xs font-semibold uppercase tracking-[0.12em];
+}
+
+.status-badge-neutral {
+  border-color: #d5dce3;
+  background-color: #eef2f5;
+  color: #5e6a79;
+}
+
+.status-badge-ok {
+  border-color: #c7e1d8;
+  background-color: #edf7f2;
+  color: #2f6b57;
+}
+
+.status-badge-warn {
+  border-color: #e7d6bb;
+  background-color: #f8f2e9;
+  color: #8a6431;
+}
+
+.status-badge-danger {
+  border-color: #efcaca;
+  background-color: #fbebeb;
+  color: #9a3d3d;
+}
+
+.code-block {
+  @apply overflow-auto rounded-md p-4 text-xs leading-6;
+  background-color: #1b2430;
+  color: #eef2f5;
+}
+
+.select-field {
+  @apply rounded-md border px-3 py-2 text-sm outline-none transition;
+  border-color: #d5dce3;
+  background-color: #fcfcfd;
+  color: #1b2430;
+}
+
+.select-field:focus {
+  border-color: #355c7d;
+  box-shadow: 0 0 0 3px rgba(53, 92, 125, 0.16);
 }

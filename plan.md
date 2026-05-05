@@ -791,7 +791,7 @@ The scripts may accept arguments:
 --sherpa-port
 --use-bundled-binaries
 --llama-binary-path
---sherpa-binary-path
+--sherpa-python-path
 ```
 
 Example Windows setup:
@@ -1012,8 +1012,8 @@ Example:
   "kind": "sherpa_onnx",
   "name": "Speech Engine",
   "enabled": true,
-  "binaryMode": "bundled",
-  "binaryName": "sherpa-onnx-vit-server",
+  "binaryMode": "custom",
+  "binaryName": "python",
   "binaryPath": null,
   "pythonEntrypoint": "sherpa_onnx_vit",
   "pythonLaunchMode": "module",
@@ -1021,11 +1021,14 @@ Example:
   "host": "127.0.0.1",
   "port": 6006,
   "runtime": {
+    "packagedRuntimeDir": "runtime/sherpa-onnx-vit",
     "serverType": "http",
     "numThreads": 4,
     "provider": "cpu",
     "sampleRate": 16000,
     "argsTemplate": [
+      "-m",
+      "{pythonEntrypoint}",
       "--host",
       "{host}",
       "--port",
@@ -1043,7 +1046,9 @@ Example:
 }
 ```
 
-The exact sherpa args must be confirmed from the built `sherpa-onnx-vit` server binary.
+For sherpa, `binaryName` and `binaryPath` refer to the Python interpreter, not to a sherpa-specific native executable.
+
+The exact sherpa args must be confirmed from the real `sherpa_onnx_vit` Python entrypoint.
 
 The implementation must support configurable args templates for sherpa.
 
@@ -1203,9 +1208,11 @@ The sherpa adapter manages the **Python/FastAPI server** from:
 https://github.com/VietInnotech/sherpa-onnx-vit.git
 ```
 
-This is **not a native sidecar binary**. It is a Python package launched via:
-- `sherpa-onnx-vit-server` (console script)
-- or `python -m sherpa_onnx_vit`
+This is **not a native sidecar binary**. It is a Python package launched as a Python program, preferably via:
+- `python -m sherpa_onnx_vit`
+
+Upstream may also expose:
+- `sherpa-onnx-vit-server` (console-script wrapper)
 
 The entrypoint is a FastAPI app using uvicorn, with HTTP APIs and optional WebSocket streaming.
 
@@ -2308,11 +2315,11 @@ Choose one of these strategies for sherpa:
 ```text
 1. Developer-managed Python install (for now)
    - Machine setup scripts install Python + dependencies
-   - Launcher calls sherpa-onnx-vit-server or python -m sherpa_onnx_vit
+   - Launcher calls `python -m sherpa_onnx_vit`
 
 2. Packaged internal Python runtime/artifact per OS
    - Bundle a pinned Python environment/artifact
-   - Launcher calls the bundled runtime directly
+   - Launcher calls the bundled Python interpreter with `-m sherpa_onnx_vit`
    - See scripts/prepare-sherpa-runtime.sh
 ```
 
@@ -2363,8 +2370,6 @@ Machine setup scripts:
 
 Launcher calls:
 ```bash
-uv run sherpa-onnx-vit-server --host 127.0.0.1 --port {port} ...
-# or
 python -m sherpa_onnx_vit --host 127.0.0.1 --port {port} ...
 ```
 
@@ -2382,24 +2387,14 @@ Each script should:
 2. Pin sherpa-onnx-vit commit
 3. Create isolated Python environment
 4. Install dependencies from pyproject.toml
-5. Produce artifact: `runtimes/sherpa-onnx-vit/<target>/bin/sherpa-onnx-vit-server`
+5. Produce artifact directory: `runtimes/sherpa-onnx-vit/<target>/`
+   - `python3` or `python.exe`
+   - packaged site-packages containing `sherpa_onnx_vit`
+   - pinned runtime dependencies
 
-Tauri bundling:
-```json
-{
-  "tauri": {
-    "bundle": {
-      "externalBin": [
-        "runtimes/sherpa-onnx-vit/aarch64-apple-darwin/bin/sherpa-onnx-vit-server",
-        "runtimes/sherpa-onnx-vit/x86_64-apple-darwin/bin/sherpa-onnx-vit-server",
-        "runtimes/sherpa-onnx-vit/x86_64-pc-windows-msvc/bin/sherpa-onnx-vit-server.exe"
-      ]
-    }
-  }
-}
-```
+Tauri bundling must include the sherpa runtime as application resources, not as `externalBin` entries.
 
-Launcher calls the bundled runtime directly.
+Launcher calls the bundled Python interpreter with `-m sherpa_onnx_vit`.
 
 ### Runtime Validation in Machine Setup
 
@@ -2751,7 +2746,7 @@ Simple Mode shows Local AI running
 Tasks:
 
 ```text
-Build or configure sherpa-onnx-vit server binary
+Build or configure sherpa-onnx-vit Python runtime
 Implement sherpa adapter
 Resolve model directory
 Resolve tokens file
@@ -2857,7 +2852,7 @@ language_engine:
   status: running
 
 speech_engine:
-  sherpa-onnx-vit-server (Python/FastAPI)
+  python -m sherpa_onnx_vit (Python/FastAPI)
   model dir: C:\ProgramData\CompanyName\AppName\models\sherpa\default
   port: 6006
   status: running

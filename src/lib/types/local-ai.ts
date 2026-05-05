@@ -16,8 +16,8 @@ export type SimpleLocalAiStatusDto = {
 
 export const defaultSimpleStatus: SimpleLocalAiStatusDto = {
   status: "not_running",
-  title: "Local AI is ready",
-  message: "The local AI service is available when you need it.",
+  title: "Local AI đã sẵn sàng",
+  message: "Dịch vụ Local AI luôn sẵn sàng khi bạn cần.",
   canStart: true,
   canStop: false,
   canRestart: false

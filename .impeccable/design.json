@@ -1,0 +1,232 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-05-05T23:53:11+07:00",
+  "title": "Design System: Local AI",
+  "extensions": {
+    "colorMeta": {
+      "canvas": {
+        "role": "neutral",
+        "displayName": "Paper Canvas",
+        "canonical": "#eef2f5",
+        "tonalRamp": ["#17202a", "#263344", "#36495f", "#4e647d", "#70839a", "#98a9b5", "#c8d3db", "#eef2f5"]
+      },
+      "surface": {
+        "role": "neutral",
+        "displayName": "Document Surface",
+        "canonical": "#fcfcfd",
+        "tonalRamp": ["#151c25", "#233142", "#34455a", "#4d6277", "#708197", "#9ba8b4", "#cbd3dc", "#fcfcfd"]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Divider Gray",
+        "canonical": "#d5dce3",
+        "tonalRamp": ["#18202a", "#273241", "#38465a", "#516076", "#718096", "#99a7b3", "#c2ccd6", "#d5dce3"]
+      },
+      "text": {
+        "role": "neutral",
+        "displayName": "Primary Text",
+        "canonical": "#1b2430",
+        "tonalRamp": ["#0c1118", "#18202b", "#253140", "#354355", "#4d5b6d", "#6c7a8a", "#9aa6b2", "#d6dce2"]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Secondary Text",
+        "canonical": "#5e6a79",
+        "tonalRamp": ["#111821", "#1f2936", "#304051", "#435568", "#5e6a79", "#7c8794", "#a4acb5", "#d8dde2"]
+      },
+      "accent": {
+        "role": "primary",
+        "displayName": "Civic Blue",
+        "canonical": "#355c7d",
+        "tonalRamp": ["#152437", "#20374c", "#29455f", "#355c7d", "#4c7393", "#7090aa", "#a0b4c2", "#d8e2ea"]
+      },
+      "accent-strong": {
+        "role": "primary",
+        "displayName": "Deep Civic Blue",
+        "canonical": "#29455f",
+        "tonalRamp": ["#101b29", "#18293b", "#20384c", "#29455f", "#3f5972", "#627c90", "#94aab7", "#d5dfe5"]
+      },
+      "success": {
+        "role": "semantic",
+        "displayName": "Service Green",
+        "canonical": "#2f6b57",
+        "tonalRamp": ["#12221c", "#1c362d", "#254738", "#2f6b57", "#4d846f", "#6ca089", "#9bc0ae", "#d9e7e1"]
+      },
+      "warning": {
+        "role": "semantic",
+        "displayName": "Notice Amber",
+        "canonical": "#8a6431",
+        "tonalRamp": ["#231a10", "#382916", "#503b1f", "#8a6431", "#a88251", "#c0a072", "#d8c39c", "#efe3cb"]
+      },
+      "danger": {
+        "role": "semantic",
+        "displayName": "Alert Red",
+        "canonical": "#9a3d3d",
+        "tonalRamp": ["#2a1414", "#432020", "#5f2d2d", "#9a3d3d", "#b96060", "#cf8888", "#e3b7b7", "#f5dddd"]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "Reserved for the main Simple Mode statement and rare top-level page titles."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "Section headers and page-level structure."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "Cards, prompts, and compact headings."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Plain explanatory copy and status text."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Field labels, table heads, and metadata tags."
+      }
+    },
+    "shadows": [
+      {
+        "name": "panel-lift",
+        "value": "0 16px 40px rgba(16, 24, 40, 0.08)",
+        "purpose": "Primary panels and the main status card."
+      },
+      {
+        "name": "hover-lift",
+        "value": "0 8px 20px rgba(16, 24, 40, 0.06)",
+        "purpose": "Optional hover treatment for clickable surfaces."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease-standard",
+        "value": "cubic-bezier(0.16, 1, 0.3, 1)",
+        "purpose": "Short, functional transitions for state changes."
+      }
+    ],
+    "breakpoints": [
+      { "name": "sm", "value": "640px" },
+      { "name": "md", "value": "768px" },
+      { "name": "lg", "value": "1024px" }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "Main action for task completion.",
+      "html": "<button class=\"ds-btn-primary\">Start</button>",
+      "css": ".ds-btn-primary{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:12px 16px;border:1px solid transparent;border-radius:12px;background:#355c7d;color:#fcfcfd;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;font-weight:600;line-height:1.2;transition:background-color 180ms cubic-bezier(0.16,1,0.3,1),transform 180ms cubic-bezier(0.16,1,0.3,1),box-shadow 180ms cubic-bezier(0.16,1,0.3,1);} .ds-btn-primary:hover{background:#29455f;transform:translateY(-1px);} .ds-btn-primary:focus-visible{outline:2px solid rgba(53,92,125,0.28);outline-offset:2px;} .ds-btn-primary:disabled{cursor:not-allowed;opacity:.5;transform:none;}"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Utility action that should not compete with the primary control.",
+      "html": "<button class=\"ds-btn-secondary\">Restart</button>",
+      "css": ".ds-btn-secondary{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:12px 16px;border:1px solid #d5dce3;border-radius:12px;background:#fcfcfd;color:#1b2430;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;font-weight:600;line-height:1.2;transition:background-color 180ms cubic-bezier(0.16,1,0.3,1),border-color 180ms cubic-bezier(0.16,1,0.3,1),transform 180ms cubic-bezier(0.16,1,0.3,1);} .ds-btn-secondary:hover{background:#eef2f5;transform:translateY(-1px);} .ds-btn-secondary:focus-visible{outline:2px solid rgba(53,92,125,0.24);outline-offset:2px;} .ds-btn-secondary:disabled{cursor:not-allowed;opacity:.5;transform:none;}"
+    },
+    {
+      "name": "Danger Button",
+      "kind": "button",
+      "refersTo": "button-danger",
+      "description": "Destructive action for stop or shutdown commands.",
+      "html": "<button class=\"ds-btn-danger\">Stop</button>",
+      "css": ".ds-btn-danger{display:inline-flex;align-items:center;justify-content:center;min-height:42px;padding:12px 16px;border:1px solid transparent;border-radius:12px;background:#9a3d3d;color:#fcfcfd;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;font-weight:600;line-height:1.2;transition:background-color 180ms cubic-bezier(0.16,1,0.3,1),transform 180ms cubic-bezier(0.16,1,0.3,1);} .ds-btn-danger:hover{background:#7d3333;transform:translateY(-1px);} .ds-btn-danger:focus-visible{outline:2px solid rgba(154,61,61,0.24);outline-offset:2px;} .ds-btn-danger:disabled{cursor:not-allowed;opacity:.5;transform:none;}"
+    },
+    {
+      "name": "Field",
+      "kind": "input",
+      "refersTo": "field",
+      "description": "Standard text field with quiet chrome.",
+      "html": "<input class=\"ds-field\" placeholder=\"Search\" />",
+      "css": ".ds-field{width:100%;min-height:42px;padding:12px 12px;border:1px solid #d5dce3;border-radius:12px;background:#fcfcfd;color:#1b2430;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;font-weight:400;line-height:1.4;transition:border-color 180ms cubic-bezier(0.16,1,0.3,1),box-shadow 180ms cubic-bezier(0.16,1,0.3,1);} .ds-field::placeholder{color:#5e6a79;} .ds-field:hover{border-color:#b9c3ce;} .ds-field:focus{outline:none;border-color:#355c7d;box-shadow:0 0 0 3px rgba(53,92,125,0.16);} .ds-field:disabled{cursor:not-allowed;opacity:.5;}"
+    },
+    {
+      "name": "Status Badge",
+      "kind": "chip",
+      "refersTo": "status-badge",
+      "description": "Compact service state label used in Simple Mode and developer screens.",
+      "html": "<span class=\"ds-badge\" data-tone=\"warn\">Starting</span>",
+      "css": ".ds-badge{display:inline-flex;align-items:center;justify-content:center;padding:4px 10px;border:1px solid transparent;border-radius:9999px;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:12px;font-weight:600;line-height:1.2;letter-spacing:.12em;text-transform:uppercase;} .ds-badge[data-tone='neutral']{background:#eef2f5;color:#5e6a79;border-color:#d5dce3;} .ds-badge[data-tone='ok']{background:#edf7f2;color:#2f6b57;border-color:#c7e1d8;} .ds-badge[data-tone='warn']{background:#f8f2e9;color:#8a6431;border-color:#e7d6bb;} .ds-badge[data-tone='danger']{background:#fbebeb;color:#9a3d3d;border-color:#efcaca;}"
+    },
+    {
+      "name": "Panel",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "Primary surface for status, tables, and developer sections.",
+      "html": "<section class=\"ds-panel\"><h2>Local AI</h2><p>Ready</p></section>",
+      "css": ".ds-panel{background:#fcfcfd;color:#1b2430;border:1px solid #d5dce3;border-radius:20px;box-shadow:0 16px 40px rgba(16,24,40,0.08);padding:24px;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;} .ds-panel h2{margin:0 0 8px;font-size:20px;font-weight:600;line-height:1.25;} .ds-panel p{margin:0;font-size:14px;line-height:1.55;color:#5e6a79;}"
+    },
+    {
+      "name": "Nav Pill",
+      "kind": "nav",
+      "refersTo": "nav-pill-active",
+      "description": "Tab or section switcher for developer navigation.",
+      "html": "<button class=\"ds-nav-pill\" aria-pressed=\"true\">Dashboard</button>",
+      "css": ".ds-nav-pill{display:inline-flex;align-items:center;justify-content:center;min-height:40px;padding:10px 16px;border:1px solid transparent;border-radius:9999px;font-family:Inter,ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;font-size:14px;font-weight:600;line-height:1.2;transition:background-color 180ms cubic-bezier(0.16,1,0.3,1),color 180ms cubic-bezier(0.16,1,0.3,1),transform 180ms cubic-bezier(0.16,1,0.3,1);} .ds-nav-pill[aria-pressed='true']{background:#1b2430;color:#fcfcfd;} .ds-nav-pill[aria-pressed='false']{background:#fcfcfd;color:#5e6a79;border-color:#d5dce3;} .ds-nav-pill:hover{transform:translateY(-1px);} .ds-nav-pill:focus-visible{outline:2px solid rgba(53,92,125,0.24);outline-offset:2px;}"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Civic Counter",
+    "overview": "This redesign is deliberately plain. It should feel like a public-service desk, not a startup cockpit: direct, procedural, calm, and difficult to misunderstand. The system uses one restrained accent, a paper-like neutral field, and standard controls that disappear into the task instead of asking for attention.\n\nThe experience must read as administrative and trustworthy at a glance. Simple Mode stays sparse and centered, with enough visual weight to feel stable, but not enough ornament to imply novelty. Developer Mode may become denser, but it should still feel like the same system opened wider, not a different product bolted on afterward.\n\nIt explicitly rejects the product anti-references in `PRODUCT.md`: startup dashboards, AI demo apps, crypto terminals, gamer UIs, glossy consumer products, flashy gradients, neon accents, playful mascots, dense analytics panels, over-designed empty states, and overly clever copy. If a screen looks promotional, it has gone wrong.",
+    "keyCharacteristics": [
+      "Calm, procedural, and intentionally unglamorous",
+      "One accent color used for action and state, not decoration",
+      "Paper-like surfaces over a cool slate canvas",
+      "Standard controls and predictable layouts",
+      "Dense enough for operators, simple enough for end users"
+    ],
+    "rules": [
+      {
+        "name": "The One Accent Rule",
+        "body": "Civic Blue is reserved for actions, selection, and active state. If it starts decorating surfaces, the system has drifted into UI theater.",
+        "section": "colors"
+      },
+      {
+        "name": "The Paper-First Rule",
+        "body": "Surfaces stay quiet and light, with borders doing more of the structural work than shadows.",
+        "section": "colors"
+      },
+      {
+        "name": "The Single Sans Rule",
+        "body": "Never introduce a second family just to make the file look more designed. This product needs clarity, not typographic commentary.",
+        "section": "typography"
+      },
+      {
+        "name": "The Flat-By-Default Rule",
+        "body": "If a surface is not interactive or primary, it should stay flat.",
+        "section": "elevation"
+      },
+      {
+        "name": "The Shadow-Is-Structure Rule",
+        "body": "Shadow is for hierarchy, not decoration. If the page still reads without it, the shadow is doing its job.",
+        "section": "elevation"
+      }
+    ],
+    "dos": [
+      "Do keep Simple Mode visually spare, centered, and easy to scan.",
+      "Do use Civic Blue only for primary actions, selected state, and active navigation.",
+      "Do let borders and spacing carry structure before adding more shadow.",
+      "Do keep messages matter-of-fact, especially when the app needs attention.",
+      "Do make Developer Mode denser, but keep it recognizably the same system."
+    ],
+    "donts": [
+      "Don't make it look like a startup dashboard.",
+      "Don't make it look like an AI demo app.",
+      "Don't make it look like a crypto terminal.",
+      "Don't make it look like a gamer UI.",
+      "Don't make it look like a glossy consumer product.",
+      "Don't use flashy gradients.",
+      "Don't use neon accents.",
+      "Don't use playful mascots.",
+      "Don't use dense analytics panels as decoration.",
+      "Don't build over-designed empty states.",
+      "Don't write overly clever copy.",
+      "Don't make simple service control feel experimental."
+    ]
+  }
+}

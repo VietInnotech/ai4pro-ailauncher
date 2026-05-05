@@ -6,20 +6,20 @@ pub fn validate_profile(profile: &EngineProfileRecord, app_root: &Path) -> AppRe
     let mut issues = Vec::new();
 
     if profile.host != "127.0.0.1" && profile.host != "localhost" {
-        issues.push(issue("error", "INVALID_HOST", "Host must remain local-only."));
+        issues.push(issue("error", "INVALID_HOST", "Máy chủ phải chỉ cho phép truy cập cục bộ."));
     }
 
     if profile.port == 0 {
-        issues.push(issue("error", "INVALID_PORT", "Port must be between 1 and 65535."));
+        issues.push(issue("error", "INVALID_PORT", "Cổng phải nằm trong khoảng từ 1 đến 65535."));
     }
 
     if matches!(profile.binary_mode, BinaryMode::Custom) {
         let inferred_runtime_binary = infer_runtime_binary(app_root, profile);
         match &profile.binary_path {
             Some(path) if resolve_path(app_root, path).exists() => {}
-            Some(_) => issues.push(issue("error", "MISSING_BINARY", "Custom binary path is unavailable.")),
+            Some(_) => issues.push(issue("error", "MISSING_BINARY", "Đường dẫn tệp nhị phân tùy chỉnh hiện không khả dụng.")),
             None if inferred_runtime_binary.as_ref().is_some_and(|path| path.exists()) => {}
-            None => issues.push(issue("error", "MISSING_BINARY", "Custom binary path is required or the packaged runtime is missing.")),
+            None => issues.push(issue("error", "MISSING_BINARY", "Cần có đường dẫn tệp nhị phân tùy chỉnh hoặc thiếu môi trường chạy được đóng gói.")),
         }
     }
 
@@ -39,13 +39,13 @@ pub fn validate_profile(profile: &EngineProfileRecord, app_root: &Path) -> AppRe
 pub fn validate_update_input(input: &crate::models::UpdateEngineProfileInput) -> AppResult<()> {
     if let Some(port) = input.port {
         if port == 0 {
-            return Err(AppError::new("INVALID_PORT", "Port must be between 1 and 65535."));
+            return Err(AppError::new("INVALID_PORT", "Cổng phải nằm trong khoảng từ 1 đến 65535."));
         }
     }
 
     if let Some(host) = &input.host {
         if host != "127.0.0.1" && host != "localhost" {
-            return Err(AppError::new("INVALID_HOST", "Host must remain local-only."));
+            return Err(AppError::new("INVALID_HOST", "Máy chủ phải chỉ cho phép truy cập cục bộ."));
         }
     }
 
@@ -57,12 +57,12 @@ fn validate_llama_profile(profile: &EngineProfileRecord, app_root: &Path, issues
         Some(path) => {
             let resolved = resolve_path(app_root, path);
             if !resolved.exists() {
-                issues.push(issue("error", "MISSING_MODEL", "GGUF model file is unavailable."));
+                issues.push(issue("error", "MISSING_MODEL", "Tệp mô hình GGUF hiện không khả dụng."));
             } else if resolved.extension().and_then(|ext| ext.to_str()) != Some("gguf") {
-                issues.push(issue("error", "INVALID_MODEL_PATH", "Llama model file must use the .gguf extension."));
+                issues.push(issue("error", "INVALID_MODEL_PATH", "Tệp mô hình Llama phải dùng phần mở rộng .gguf."));
             }
         }
-        None => issues.push(issue("error", "MISSING_MODEL", "GGUF model path is required.")),
+        None => issues.push(issue("error", "MISSING_MODEL", "Cần có đường dẫn mô hình GGUF.")),
     }
 }
 
@@ -73,52 +73,52 @@ fn validate_sherpa_profile(profile: &EngineProfileRecord, app_root: &Path, issue
         Some(path) => {
             let resolved = resolve_path(app_root, path);
             if !resolved.exists() {
-                issues.push(issue("error", "MISSING_MODEL", "Sherpa model directory is unavailable."));
+                issues.push(issue("error", "MISSING_MODEL", "Thư mục mô hình Sherpa hiện không khả dụng."));
                 return;
             }
             if !resolved.is_dir() {
-                issues.push(issue("error", "INVALID_MODEL_DIR", "Sherpa model path must be a directory."));
+                issues.push(issue("error", "INVALID_MODEL_DIR", "Đường dẫn mô hình Sherpa phải là một thư mục."));
                 return;
             }
 
             if !has_match(&resolved, "encoder") {
-                issues.push(issue("error", "MISSING_MODEL", "Sherpa model directory is missing encoder*.onnx."));
+                issues.push(issue("error", "MISSING_MODEL", "Thư mục mô hình Sherpa thiếu encoder*.onnx."));
             }
             if !has_match(&resolved, "decoder") {
-                issues.push(issue("error", "MISSING_MODEL", "Sherpa model directory is missing decoder*.onnx."));
+                issues.push(issue("error", "MISSING_MODEL", "Thư mục mô hình Sherpa thiếu decoder*.onnx."));
             }
             if !has_match(&resolved, "joiner") {
-                issues.push(issue("error", "MISSING_MODEL", "Sherpa model directory is missing joiner*.onnx."));
+                issues.push(issue("error", "MISSING_MODEL", "Thư mục mô hình Sherpa thiếu joiner*.onnx."));
             }
 
             let has_tokens = resolved.join("tokens.txt").exists();
             let has_config = resolved.join("config.json").exists();
             if !has_tokens && !has_config {
-                issues.push(issue("error", "INVALID_TOKENS_PATH", "Sherpa model directory must contain tokens.txt or config.json."));
+                issues.push(issue("error", "INVALID_TOKENS_PATH", "Thư mục mô hình Sherpa phải chứa tokens.txt hoặc config.json."));
             }
 
             if let Some(tokens_path) = &profile.tokens_path {
                 let resolved_tokens = resolve_path(app_root, tokens_path);
                 if !resolved_tokens.exists() {
-                    issues.push(issue("warning", "INVALID_TOKENS_PATH", "Configured tokens path is unavailable; relying on model-dir-first resolution."));
+                    issues.push(issue("warning", "INVALID_TOKENS_PATH", "Đường dẫn tokens đã cấu hình hiện không khả dụng; sẽ dùng cách phân giải ưu tiên thư mục mô hình."));
                 }
             }
         }
-        None => issues.push(issue("error", "INVALID_MODEL_DIR", "Sherpa model directory is required.")),
+        None => issues.push(issue("error", "INVALID_MODEL_DIR", "Cần có thư mục mô hình Sherpa.")),
     }
 
     match profile.runtime.get("entrypoint").and_then(|value| value.as_str()) {
         Some("python_module") | Some("console_script") => {}
-        Some(_) => issues.push(issue("error", "INVALID_CONFIG", "Sherpa runtime entrypoint must be python_module or console_script.")),
-        None => issues.push(issue("warning", "CONFIG_PARSE_ERROR", "Sherpa runtime entrypoint is missing; defaults will be used.")),
+        Some(_) => issues.push(issue("error", "INVALID_CONFIG", "Entrypoint runtime của Sherpa phải là python_module hoặc console_script.")),
+        None => issues.push(issue("warning", "CONFIG_PARSE_ERROR", "Thiếu entrypoint runtime của Sherpa; sẽ dùng giá trị mặc định.")),
     }
 
     if profile.runtime.get("argsTemplate").and_then(|value| value.as_array()).is_none() {
-        issues.push(issue("warning", "CONFIG_PARSE_ERROR", "Sherpa args template is missing; defaults will be used."));
+        issues.push(issue("warning", "CONFIG_PARSE_ERROR", "Thiếu mẫu đối số của Sherpa; sẽ dùng giá trị mặc định."));
     }
 
     if profile.runtime.get("packagedRuntimeDir").and_then(|value| value.as_str()).is_none() {
-        issues.push(issue("warning", "CONFIG_PARSE_ERROR", "Sherpa packaged runtime directory is missing."));
+        issues.push(issue("warning", "CONFIG_PARSE_ERROR", "Thiếu thư mục runtime đóng gói của Sherpa."));
     }
 }
 

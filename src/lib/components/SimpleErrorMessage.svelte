@@ -3,7 +3,7 @@
 </script>
 
 {#if message}
-  <div class="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+  <div class="rounded-md border px-4 py-3 text-sm text-[#8a6431]" style="border-color: #e7d6bb; background-color: #f8f2e9;">
     {message}
   </div>
 {/if}

@@ -1,6 +1,7 @@
 # Expected sidecar layout
 
 The launcher plans for release artifacts to live under the app-managed runtime and binary roots.
+This directory only documents the native sidecar portion of that layout.
 
 ## Llama.cpp
 
@@ -27,9 +28,12 @@ Upstream contract pinned from:
 - branch: `main`
 - commit: `6a7fe63ded85cd089bff73c12c54e1bda3bd7cf3`
 
-Verified launch shapes from upstream:
+Preferred launch shape in this repo:
 
-- `sherpa-onnx-vit-server`
 - `python -m sherpa_onnx_vit`
+
+Upstream may also expose:
+
+- `sherpa-onnx-vit-server` (console-script wrapper around the same Python program)
 
 These files are placeholders for layout documentation only; no binaries or runtimes are included.

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
+  import { formatEngineStatusLabel, UNAVAILABLE_LABEL } from "$lib/labels";
   import type { DeveloperEngineProfileDto } from "$lib/types/developer";
 
   export let engines: DeveloperEngineProfileDto[] = [];
@@ -13,24 +14,24 @@
 <section class="space-y-4">
   <div class="flex items-center justify-between">
     <div>
-      <h2 class="text-lg font-semibold text-slate-950">Developer dashboard</h2>
-      <p class="text-sm text-slate-500">Aggregate state, engine status, and machine readiness snapshot.</p>
+      <h2 class="text-lg font-semibold text-[#1b2430]">Bảng điều khiển nhà phát triển</h2>
+      <p class="text-sm text-[#5e6a79]">Ảnh chụp nhanh về trạng thái tổng hợp, trạng thái động cơ và mức độ sẵn sàng của máy.</p>
     </div>
-    <button class="action-button-secondary" on:click={() => dispatch("reload")}>Refresh</button>
+    <button class="action-button-secondary" on:click={() => dispatch("reload")}>Làm mới</button>
   </div>
 
   <section class="grid gap-4 md:grid-cols-3">
     <div class="panel p-5">
-      <p class="field-label">Aggregate Local AI</p>
-      <p class="text-xl font-semibold text-slate-950">{engines.length > 0 && runningCount === engines.length ? "Running" : attentionCount > 0 ? "Needs attention" : "Idle"}</p>
+      <p class="field-label">Local AI tổng thể</p>
+      <p class="text-xl font-semibold text-[#1b2430]">{engines.length > 0 && runningCount === engines.length ? "Đang hoạt động" : attentionCount > 0 ? "Cần chú ý" : "Chưa hoạt động"}</p>
     </div>
     <div class="panel p-5">
-      <p class="field-label">Running engines</p>
-      <p class="text-xl font-semibold text-slate-950">{runningCount}</p>
+      <p class="field-label">Động cơ đang hoạt động</p>
+      <p class="text-xl font-semibold text-[#1b2430]">{runningCount}</p>
     </div>
     <div class="panel p-5">
-      <p class="field-label">Needs attention</p>
-      <p class="text-xl font-semibold text-slate-950">{attentionCount}</p>
+      <p class="field-label">Mục cần chú ý</p>
+      <p class="text-xl font-semibold text-[#1b2430]">{attentionCount}</p>
     </div>
   </section>
 
@@ -38,9 +39,9 @@
     {#each engines as engine}
       <div class="panel p-5">
         <p class="field-label">{engine.name}</p>
-        <p class="text-xl font-semibold text-slate-950">{engine.status}</p>
-        <p class="mt-2 text-sm text-slate-500">Health URL: {engine.healthUrl ?? "Unavailable"}</p>
-        <p class="mt-1 text-sm text-slate-500">PID: {engine.pid ?? "—"}</p>
+        <p class="text-xl font-semibold text-[#1b2430]">{formatEngineStatusLabel(engine.status)}</p>
+        <p class="mt-2 text-sm text-[#5e6a79]">URL kiểm tra tình trạng: {engine.healthUrl ?? UNAVAILABLE_LABEL}</p>
+        <p class="mt-1 text-sm text-[#5e6a79]">PID: {engine.pid ?? UNAVAILABLE_LABEL}</p>
       </div>
     {/each}
   </section>
