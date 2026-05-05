@@ -1,0 +1,17 @@
+node_modules/
+dist/
+bun.lockb
+src-tauri/target/
+data/
+*.log
+
+# Local test assets (large files)
+local-assets/
+*.mp3
+*.wav
+*.gguf
+government-meeting.mp3
+
+# macOS
+.DS_Store
+

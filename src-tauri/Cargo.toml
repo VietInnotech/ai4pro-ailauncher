@@ -1,0 +1,15 @@
+[package]
+name = "ai-launcher-tauri"
+version = "0.1.0"
+edition = "2021"
+build = "build.rs"
+
+[dependencies]
+serde = { version = "1", features = ["derive"] }
+serde_json = "1"
+thiserror = "1"
+rusqlite = { version = "0.32", features = ["bundled"] }
+tauri = { version = "2", features = [] }
+
+[build-dependencies]
+tauri-build = { version = "2", features = [] }
