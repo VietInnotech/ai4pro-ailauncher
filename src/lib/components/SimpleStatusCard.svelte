@@ -8,7 +8,9 @@
   export let status: SimpleLocalAiStatusDto;
   export let busy = false;
   export let notice = "";
+  export let lastCheckedAt: string | undefined = undefined;
   export let onLogoClick: () => void | Promise<void> = () => {};
+  export let onRefresh: () => void | Promise<void> = () => {};
   export let onStart: () => void | Promise<void> = () => {};
   export let onStop: () => void | Promise<void> = () => {};
   export let onRestart: () => void | Promise<void> = () => {};
@@ -20,6 +22,20 @@
     stopping: "warn",
     needs_attention: "danger"
   };
+
+  const lastCheckedFormatter = new Intl.DateTimeFormat("vi-VN", {
+    dateStyle: "short",
+    timeStyle: "medium"
+  });
+
+  function formatLastCheckedAt(value?: string): string {
+    if (!value) return "Chưa kiểm tra";
+
+    const date = new Date(value);
+    if (Number.isNaN(date.getTime())) return "Chưa kiểm tra";
+
+    return lastCheckedFormatter.format(date);
+  }
 </script>
 
 <section class="panel mx-auto flex w-full max-w-xl flex-col items-center gap-7 px-6 py-10 text-center sm:px-8">
@@ -36,6 +52,9 @@
     <div class="space-y-2">
       <h1 class="text-[32px] font-semibold leading-tight text-[#1b2430]">{status.title}</h1>
       <p class="max-w-md text-sm leading-6 text-[#5e6a79]">{status.message}</p>
+      <p class="text-xs font-medium uppercase tracking-[0.08em] text-[#7a8796]">
+        Kiểm tra lần cuối: {formatLastCheckedAt(lastCheckedAt)}
+      </p>
     </div>
   </div>
 
@@ -44,6 +63,7 @@
     canStop={status.canStop}
     canRestart={status.canRestart}
     {busy}
+    {onRefresh}
     {onStart}
     {onStop}
     {onRestart}

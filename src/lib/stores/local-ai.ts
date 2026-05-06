@@ -28,12 +28,14 @@ type LocalAiStoreState = {
   status: SimpleLocalAiStatusDto;
   loading: boolean;
   lastError?: string;
+  lastCheckedAt?: string;
 };
 
 function createLocalAiStore() {
   const { subscribe, update, set } = writable<LocalAiStoreState>({
     status: defaultSimpleStatus,
-    loading: false
+    loading: false,
+    lastCheckedAt: undefined
   });
 
   async function run(action: () => Promise<SimpleLocalAiStatusDto>) {
@@ -41,7 +43,12 @@ function createLocalAiStore() {
 
     try {
       const status = await action();
-      update(() => ({ status, loading: false }));
+      update(() => ({
+        status,
+        loading: false,
+        lastCheckedAt: new Date().toISOString(),
+        lastError: undefined
+      }));
     } catch (error) {
       update((state) => ({
         ...state,
@@ -54,7 +61,7 @@ function createLocalAiStore() {
   return {
     subscribe,
     reset() {
-      set({ status: defaultSimpleStatus, loading: false });
+      set({ status: defaultSimpleStatus, loading: false, lastCheckedAt: undefined });
     },
     refresh() {
       return run(getSimpleLocalAiStatus);

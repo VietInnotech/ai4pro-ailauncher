@@ -6,8 +6,8 @@ use crate::health;
 use crate::models::{
     DeveloperEngineProfileDto, DeveloperModelPackageDto, EngineKind, EngineProfileRecord,
     EngineRuntimeStateRecord, EngineStatus, ModelPackageRecord, ProcessSnapshotDto,
-    SimpleLocalAiStatus, SimpleLocalAiStatusDto, UpdateEngineProfileInput, ValidationIssueDto,
-    ValidationResultDto,
+    SimpleLocalAiStatus, SimpleLocalAiStatusDto, SimpleModelStatus, SimpleModelSummaryDto,
+    UpdateEngineProfileInput, ValidationIssueDto, ValidationResultDto,
 };
 use crate::ports;
 use crate::process_supervisor::ProcessSupervisor;
@@ -140,7 +140,7 @@ impl EngineManager {
     }
 
     pub fn validate_model_package(&self, id: &str) -> AppResult<ValidationResultDto> {
-        let package = self
+        let mut package = self
             .db
             .list_model_packages()?
             .into_iter()
@@ -149,8 +149,9 @@ impl EngineManager {
 
         let resolved = self.resolve_model_package_path(&package);
         let mut issues = Vec::new();
+        let installed = resolved.exists();
 
-        if !resolved.exists() {
+        if !installed {
             issues.push(ValidationIssueDto {
                 severity: "error".to_string(),
                 code: "MISSING_MODEL".to_string(),
@@ -194,12 +195,24 @@ impl EngineManager {
             }
         }
 
+        let checked_at = crate::models::now_timestamp();
+        package.installed = installed;
+        package.verified = issues.is_empty();
+        package.last_verified_at = Some(checked_at.clone());
+        package.updated_at = checked_at;
+        self.db.upsert_model_package(&package)?;
+
         Ok(ValidationResultDto {
             engine_id: package.id,
             valid: issues.is_empty(),
             issues,
             generated_args: vec![],
         })
+    }
+
+    pub fn check_simple_model(&self, id: &str) -> AppResult<SimpleLocalAiStatusDto> {
+        self.validate_model_package(id)?;
+        self.simple_status()
     }
 
     pub fn start_all(&self) -> AppResult<()> {
@@ -330,6 +343,12 @@ impl EngineManager {
 
         let profiles = self.db.list_engine_profiles()?;
         let enabled_profiles: Vec<_> = profiles.iter().filter(|profile| profile.enabled).collect();
+        let model_summaries = self
+            .db
+            .list_model_packages()?
+            .into_iter()
+            .map(simple_model_summary_from_record)
+            .collect();
 
         if enabled_profiles.is_empty() {
             return Ok(SimpleLocalAiStatusDto {
@@ -339,6 +358,7 @@ impl EngineManager {
                 can_start: false,
                 can_stop: false,
                 can_restart: true,
+                model_summaries,
             });
         }
 
@@ -372,6 +392,7 @@ impl EngineManager {
                 can_start: false,
                 can_stop: true,
                 can_restart: true,
+                model_summaries: model_summaries.clone(),
             }
         } else if stopping {
             SimpleLocalAiStatusDto {
@@ -381,6 +402,7 @@ impl EngineManager {
                 can_start: false,
                 can_stop: false,
                 can_restart: false,
+                model_summaries: model_summaries.clone(),
             }
         } else if starting || running > 0 {
             SimpleLocalAiStatusDto {
@@ -390,6 +412,7 @@ impl EngineManager {
                 can_start: false,
                 can_stop: true,
                 can_restart: false,
+                model_summaries: model_summaries.clone(),
             }
         } else if needs_attention {
             SimpleLocalAiStatusDto {
@@ -399,6 +422,7 @@ impl EngineManager {
                 can_start: false,
                 can_stop: false,
                 can_restart: true,
+                model_summaries: model_summaries.clone(),
             }
         } else {
             SimpleLocalAiStatusDto {
@@ -408,6 +432,7 @@ impl EngineManager {
                 can_start: true,
                 can_stop: false,
                 can_restart: false,
+                model_summaries: model_summaries.clone(),
             }
         };
 
@@ -451,6 +476,9 @@ impl EngineManager {
             binary_path: profile.binary_path,
             resolved_binary_path,
             model_package_id: profile.model_package_id,
+            model_path: profile.model_path.clone(),
+            model_dir: profile.model_dir.clone(),
+            tokens_path: profile.tokens_path.clone(),
             resolved_model_path: profile
                 .model_path
                 .as_ref()
@@ -711,6 +739,23 @@ fn status_name(status: &EngineStatus) -> &'static str {
         EngineStatus::MissingModel => "missing_model",
         EngineStatus::InvalidConfig => "invalid_config",
         EngineStatus::PortConflict => "port_conflict",
+    }
+}
+
+fn simple_model_summary_from_record(package: ModelPackageRecord) -> SimpleModelSummaryDto {
+    let status = if package.verified {
+        SimpleModelStatus::Ready
+    } else if package.last_verified_at.is_some() {
+        SimpleModelStatus::NeedsAttention
+    } else {
+        SimpleModelStatus::Unchecked
+    };
+
+    SimpleModelSummaryDto {
+        id: package.id,
+        display_name: package.display_name,
+        status,
+        last_checked_at: package.last_verified_at,
     }
 }
 

@@ -9,7 +9,7 @@ Usage:
   scripts/prepare-sidecars.sh [--repo-root PATH] [--binaries-dir PATH] [--runtime-dir PATH] [--apply] [--dry-run]
 
 This script is developer-facing scaffolding only. It does not build binaries.
-It prepares or previews the llama sidecar directory plus the packaged sherpa runtime root.
+It prepares or previews the release bundle input layout for llama sidecars plus the packaged sherpa runtime root.
 EOF
 }
 
@@ -41,12 +41,11 @@ done
 
 script_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 : "${repo_root:=$(CDPATH= cd -- "$script_dir/.." && pwd)}"
-: "${binaries_dir:=$repo_root/src-tauri/binaries}"
-: "${runtime_dir:=$repo_root/src-tauri/runtime/sherpa-onnx-vit}"
+: "${binaries_dir:=$repo_root/src-tauri/bundle/binaries}"
+: "${runtime_dir:=$repo_root/src-tauri/bundle/runtime/sherpa-onnx-vit}"
 
 expected_llama=(
   "llama-server-aarch64-apple-darwin"
-  "llama-server-x86_64-apple-darwin"
   "llama-server-x86_64-pc-windows-msvc.exe"
 )
 
@@ -80,4 +79,5 @@ for name in python3 python.exe; do
   fi
 done
 
-printf 'See %s for the explicit placeholder layout.\n' "$repo_root/src-tauri/binaries/expected-layout.md"
+printf 'Run bun run validate:bundle-artifacts before packaging.\n'
+printf 'See %s for the explicit runtime layout.\n' "$repo_root/src-tauri/binaries/expected-layout.md"

@@ -1,11 +1,13 @@
 use crate::app_paths::AppPaths;
 use crate::app_settings::AppSettingsStore;
+use crate::bundled_resources;
 use crate::db::Database;
 use crate::developer::developer_mode::DeveloperModeController;
 use crate::engine_manager::EngineManager;
 use crate::errors::AppResult;
 use crate::local_ai::LocalAiService;
 use crate::process_supervisor::ProcessSupervisor;
+use std::path::Path;
 use std::sync::Arc;
 
 #[derive(Clone)]
@@ -19,8 +21,12 @@ pub struct AppContext {
 }
 
 impl AppContext {
-    pub fn bootstrap() -> AppResult<Self> {
+    pub fn bootstrap(resource_dir: Option<&Path>) -> AppResult<Self> {
         let paths = AppPaths::discover()?;
+        if let Some(resource_dir) = resource_dir {
+            bundled_resources::sync_bundled_resources(&paths, resource_dir)?;
+        }
+
         let db = Database::initialize(paths.database_path.clone())?;
         let settings = AppSettingsStore::new(db.clone());
         let mut loaded_settings = settings.load()?;

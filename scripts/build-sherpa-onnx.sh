@@ -30,7 +30,7 @@ done
 
 script_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 : "${repo_root:=$(CDPATH= cd -- "$script_dir/.." && pwd)}"
-: "${runtime_dir:=$repo_root/src-tauri/runtime/sherpa-onnx-vit}"
+: "${runtime_dir:=$repo_root/src-tauri/bundle/runtime/sherpa-onnx-vit}"
 
 printf 'sherpa-onnx-vit packaged runtime scaffold\n'
 printf 'Repo root: %s\n' "$repo_root"
@@ -50,5 +50,5 @@ if ((check_only)); then
 fi
 
 printf 'No build is performed here.\n'
-printf 'Package a Python runtime that can launch `python -m sherpa_onnx_vit` and place it under src-tauri/runtime/sherpa-onnx-vit/.\n'
+printf 'Package a Python runtime that can launch `python -m sherpa_onnx_vit` and place it under src-tauri/bundle/runtime/sherpa-onnx-vit/.\n'
 printf 'The runtime must include FastAPI, uvicorn, and the sherpa_onnx_vit package from VietInnotech/sherpa-onnx-vit at commit 6a7fe63ded85cd089bff73c12c54e1bda3bd7cf3.\n'

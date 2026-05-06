@@ -157,3 +157,24 @@ button:focus-visible {
   border-color: #355c7d;
   box-shadow: 0 0 0 3px rgba(53, 92, 125, 0.16);
 }
+
+.developer-tabs {
+  @apply flex flex-wrap gap-1 rounded-lg border p-1;
+  border-color: #d5dce3;
+  background-color: #fcfcfd;
+}
+
+.developer-tab {
+  @apply min-h-9 rounded-md px-3 py-1.5 text-sm font-semibold transition;
+  color: #5e6a79;
+}
+
+.developer-tab:hover {
+  background-color: #eef2f5;
+  color: #1b2430;
+}
+
+.developer-tab-active {
+  background-color: #1b2430;
+  color: #fcfcfd;
+}

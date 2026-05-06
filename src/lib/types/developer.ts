@@ -12,6 +12,9 @@ export type DeveloperEngineProfileDto = {
   binaryPath?: string;
   resolvedBinaryPath?: string;
   modelPackageId?: string;
+  modelPath?: string;
+  modelDir?: string;
+  tokensPath?: string;
   resolvedModelPath?: string;
   resolvedModelDir?: string;
   resolvedTokensPath?: string;
@@ -29,14 +32,20 @@ export type DeveloperEngineProfileDto = {
 };
 
 export type UpdateEngineProfileDto = {
-  enabled: boolean;
-  binaryMode: BinaryMode;
+  name?: string;
+  enabled?: boolean;
+  binaryMode?: BinaryMode;
   binaryPath?: string | null;
-  host: string;
-  port: number;
-  runtime: Record<string, unknown>;
-  extraArgs: string[];
-  autoStart: boolean;
+  modelPackageId?: string | null;
+  modelPath?: string | null;
+  modelDir?: string | null;
+  tokensPath?: string | null;
+  host?: string;
+  port?: number;
+  healthUrl?: string | null;
+  runtime?: Record<string, unknown>;
+  extraArgs?: string[];
+  autoStart?: boolean;
 };
 
 export type ValidationIssueDto = {

@@ -1,11 +1,22 @@
 <script lang="ts">
   import { createEventDispatcher } from "svelte";
-  import { formatEngineStatusLabel, UNAVAILABLE_LABEL } from "$lib/labels";
+  import { formatEngineStatusLabel, formatSimpleStatusLabel, UNAVAILABLE_LABEL } from "$lib/labels";
+  import StatusBadge from "$lib/components/StatusBadge.svelte";
+  import type { SimpleLocalAiStatusDto } from "$lib/types/local-ai";
   import type { DeveloperEngineProfileDto } from "$lib/types/developer";
 
   export let engines: DeveloperEngineProfileDto[] = [];
+  export let simpleStatus: SimpleLocalAiStatusDto;
 
   const dispatch = createEventDispatcher<{ reload: void }>();
+
+  const badgeTone: Record<SimpleLocalAiStatusDto["status"], "neutral" | "ok" | "warn" | "danger"> = {
+    not_running: "neutral",
+    starting: "warn",
+    ready: "ok",
+    stopping: "warn",
+    needs_attention: "danger"
+  };
 
   $: runningCount = engines.filter((engine) => engine.status === "running").length;
   $: attentionCount = engines.filter((engine) => ["unhealthy", "crashed", "missing_binary", "missing_model", "invalid_config", "port_conflict"].includes(String(engine.status))).length;
@@ -23,7 +34,10 @@
   <section class="grid gap-4 md:grid-cols-3">
     <div class="panel p-5">
       <p class="field-label">Local AI tổng thể</p>
-      <p class="text-xl font-semibold text-[#1b2430]">{engines.length > 0 && runningCount === engines.length ? "Đang hoạt động" : attentionCount > 0 ? "Cần chú ý" : "Chưa hoạt động"}</p>
+      <div class="mt-2">
+        <StatusBadge tone={badgeTone[simpleStatus.status]} text={formatSimpleStatusLabel(simpleStatus.status)} />
+      </div>
+      <p class="mt-3 text-sm text-[#5e6a79]">{simpleStatus.title}</p>
     </div>
     <div class="panel p-5">
       <p class="field-label">Động cơ đang hoạt động</p>

@@ -9,11 +9,13 @@
   import DeveloperLayout from "$lib/components/DeveloperLayout.svelte";
   import DeveloperModeGate from "$lib/components/DeveloperModeGate.svelte";
   import { developerMode } from "$lib/stores/developer-mode";
+  import { localAiStore } from "$lib/stores/local-ai";
   import type {
     DeveloperEngineProfileDto,
     DeveloperModelPackageDto,
     DiagnosticsBundleDto
   } from "$lib/types/developer";
+  import { defaultSimpleStatus, type SimpleLocalAiStatusDto } from "$lib/types/local-ai";
   import DeveloperDashboard from "$routes/DeveloperDashboard.svelte";
   import DeveloperDiagnostics from "$routes/DeveloperDiagnostics.svelte";
   import DeveloperEngines from "$routes/DeveloperEngines.svelte";
@@ -38,8 +40,9 @@
   let diagnostics: DiagnosticsBundleDto | null = null;
   let activeView: DeveloperView = "dashboard";
   let developerNotice = "";
+  let simpleStatus: SimpleLocalAiStatusDto = defaultSimpleStatus;
 
-  const unsubscribe = developerMode.subscribe((value) => {
+  const unsubscribeDeveloperMode = developerMode.subscribe((value) => {
     devEnabled = value;
     if (value) {
       developerNotice = "Chế độ nhà phát triển đã được bật. Các cài đặt nâng cao và chẩn đoán hiện đã hiển thị.";
@@ -47,8 +50,13 @@
     }
   });
 
+  const unsubscribeLocalAi = localAiStore.subscribe((value) => {
+    simpleStatus = value.status;
+  });
+
   onDestroy(() => {
-    unsubscribe();
+    unsubscribeDeveloperMode();
+    unsubscribeLocalAi();
   });
 
   async function loadDeveloperData() {
@@ -56,7 +64,8 @@
       const [loadedEngines, loadedModels, loadedDiagnostics] = await Promise.all([
         devListEngineProfiles(),
         devListModelPackages(),
-        devGetDiagnosticsBundle()
+        devGetDiagnosticsBundle(),
+        localAiStore.refresh()
       ]);
 
       engines = loadedEngines;
@@ -96,10 +105,12 @@
           </div>
         </div>
 
-        <div class="flex flex-wrap gap-2">
+        <div class="developer-tabs" role="tablist" aria-label="Công cụ nhà phát triển">
           {#each developerViews as view}
             <button
-              class={`rounded-full border px-4 py-2 text-sm font-semibold transition ${activeView === view.id ? "border-[#1b2430] bg-[#1b2430] text-white" : "border-[#d5dce3] bg-[#fcfcfd] text-[#5e6a79] hover:bg-[#eef2f5]"}`}
+              class={`developer-tab ${activeView === view.id ? "developer-tab-active" : ""}`}
+              aria-selected={activeView === view.id}
+              role="tab"
               on:click={() => setActiveView(view.id)}
             >
               {view.label}
@@ -107,9 +118,9 @@
           {/each}
         </div>
 
-        <DeveloperLayout active={activeView}>
+        <DeveloperLayout>
           {#if activeView === "dashboard"}
-            <DeveloperDashboard {engines} on:reload={loadDeveloperData} />
+            <DeveloperDashboard {engines} {simpleStatus} on:reload={loadDeveloperData} />
           {:else if activeView === "engines"}
             <DeveloperEngines {engines} on:reload={loadDeveloperData} />
           {:else if activeView === "models"}

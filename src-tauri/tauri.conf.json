@@ -5,7 +5,7 @@
   "identifier": "com.ai4pro.localai.launcher",
   "build": {
     "beforeDevCommand": "bun run dev",
-    "beforeBuildCommand": "bun run build",
+    "beforeBuildCommand": "bun run validate:bundle-artifacts && bun run build",
     "devUrl": "http://localhost:1420",
     "frontendDist": "../dist"
   },
@@ -22,6 +22,10 @@
   },
   "bundle": {
     "active": true,
-    "icon": []
+    "icon": [],
+    "resources": {
+      "bundle/binaries": "binaries",
+      "bundle/runtime/sherpa-onnx-vit": "runtime/sherpa-onnx-vit"
+    }
   }
 }

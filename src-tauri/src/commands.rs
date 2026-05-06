@@ -22,6 +22,11 @@ pub fn get_simple_local_ai_status(state: State<'_, AppContext>) -> Result<Simple
 }
 
 #[tauri::command]
+pub fn check_simple_model_status(state: State<'_, AppContext>, id: String) -> Result<SimpleLocalAiStatusDto, String> {
+    state.local_ai.check_model(&id).map_err(simple_error)
+}
+
+#[tauri::command]
 pub fn start_local_ai(state: State<'_, AppContext>) -> Result<SimpleLocalAiStatusDto, String> {
     state.local_ai.start().map_err(simple_error)
 }

@@ -20,7 +20,7 @@ This script is intentionally non-building scaffolding. It documents the packaged
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 if (-not $RepoRoot) { $RepoRoot = (Resolve-Path (Join-Path $scriptDir '..')).Path }
-if (-not $RuntimeDir) { $RuntimeDir = Join-Path $RepoRoot 'src-tauri/runtime/sherpa-onnx-vit' }
+if (-not $RuntimeDir) { $RuntimeDir = Join-Path $RepoRoot 'src-tauri/bundle/runtime/sherpa-onnx-vit' }
 
 Write-Output 'sherpa-onnx-vit packaged runtime scaffold'
 Write-Output ("Repo root: {0}" -f $RepoRoot)
@@ -37,5 +37,5 @@ if ($CheckOnly) {
 }
 
 Write-Output 'No build is performed here.'
-Write-Output 'Package a Python runtime that can launch `python -m sherpa_onnx_vit` and place it under src-tauri/runtime/sherpa-onnx-vit/.'
+Write-Output 'Package a Python runtime that can launch `python -m sherpa_onnx_vit` and place it under src-tauri/bundle/runtime/sherpa-onnx-vit/.'
 Write-Output 'The runtime must include FastAPI, uvicorn, and the sherpa_onnx_vit package from VietInnotech/sherpa-onnx-vit at commit 6a7fe63ded85cd089bff73c12c54e1bda3bd7cf3.'

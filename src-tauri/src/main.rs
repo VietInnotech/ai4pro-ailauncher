@@ -1,6 +1,7 @@
 mod adapters;
 mod app_paths;
 mod app_settings;
+mod bundled_resources;
 mod commands;
 mod db;
 mod developer;
@@ -18,22 +19,25 @@ mod state;
 mod validation;
 
 use state::AppContext;
+use std::path::PathBuf;
+use tauri::Manager;
 
 fn main() {
-    let context = match AppContext::bootstrap() {
-        Ok(context) => context,
-        Err(error) => {
-            eprintln!("failed to bootstrap app context: {error}");
-            std::process::exit(1);
-        }
-    };
-
-    let shutdown_context = context.clone();
-
     tauri::Builder::default()
-        .manage(context)
+        .plugin(tauri_plugin_dialog::init())
+        .setup(|app| {
+            let packaged_resource_dir = app
+                .path()
+                .resource_dir()
+                .map_err(bundled_resources::resource_dir_error)?;
+            let resource_dir = runtime_resource_dir(packaged_resource_dir);
+            let context = AppContext::bootstrap(resource_dir.as_deref())?;
+            app.manage(context);
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             commands::get_simple_local_ai_status,
+            commands::check_simple_model_status,
             commands::start_local_ai,
             commands::stop_local_ai,
             commands::restart_local_ai,
@@ -56,9 +60,10 @@ fn main() {
         ])
         .on_window_event(move |window, event| {
             if let tauri::WindowEvent::CloseRequested { .. } = event {
-                if let Ok(settings) = shutdown_context.settings.load() {
+                let context = window.state::<AppContext>();
+                if let Ok(settings) = context.settings.load() {
                     if settings.stop_engines_on_exit {
-                        let _ = shutdown_context.engine_manager.shutdown_all();
+                        let _ = context.engine_manager.shutdown_all();
                     }
                 }
                 let _ = window;
@@ -66,4 +71,17 @@ fn main() {
         })
         .run(tauri::generate_context!())
         .expect("failed to run tauri application");
+}
+
+fn has_runtime_resources(path: &PathBuf) -> bool {
+    path.join("binaries").exists() || path.join("runtime").exists()
+}
+
+fn runtime_resource_dir(packaged_resource_dir: PathBuf) -> Option<PathBuf> {
+    #[cfg(debug_assertions)]
+    if let Some(dev_resource_dir) = bundled_resources::resource_dir_for_dev() {
+        return Some(dev_resource_dir);
+    }
+
+    has_runtime_resources(&packaged_resource_dir).then_some(packaged_resource_dir)
 }

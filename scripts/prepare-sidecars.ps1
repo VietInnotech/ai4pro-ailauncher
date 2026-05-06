@@ -14,20 +14,19 @@ prepare-sidecars.ps1 — scaffold the planned runtime layout
 Usage:
   scripts/prepare-sidecars.ps1 [-RepoRoot PATH] [-BinariesDir PATH] [-RuntimeDir PATH] [-Apply] [-DryRun]
 
-This script is developer-facing scaffolding only. It prepares or previews the llama sidecar directory plus the packaged sherpa runtime root.
+This script is developer-facing scaffolding only. It prepares or previews the release bundle input layout for llama sidecars plus the packaged sherpa runtime root.
 '@ | Write-Output
   exit 0
 }
 
 $scriptDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 if (-not $RepoRoot) { $RepoRoot = (Resolve-Path (Join-Path $scriptDir '..')).Path }
-if (-not $BinariesDir) { $BinariesDir = Join-Path $RepoRoot 'src-tauri/binaries' }
-if (-not $RuntimeDir) { $RuntimeDir = Join-Path $RepoRoot 'src-tauri/runtime/sherpa-onnx-vit' }
+if (-not $BinariesDir) { $BinariesDir = Join-Path $RepoRoot 'src-tauri/bundle/binaries' }
+if (-not $RuntimeDir) { $RuntimeDir = Join-Path $RepoRoot 'src-tauri/bundle/runtime/sherpa-onnx-vit' }
 if ($DryRun) { $Apply = $false }
 
 $expected = @(
   'llama-server-aarch64-apple-darwin',
-  'llama-server-x86_64-apple-darwin',
   'llama-server-x86_64-pc-windows-msvc.exe'
 )
 
@@ -60,4 +59,5 @@ foreach ($name in @('python3', 'python.exe')) {
   }
 }
 
-Write-Output ("See {0} for the explicit placeholder layout." -f (Join-Path $RepoRoot 'src-tauri/binaries/expected-layout.md'))
+Write-Output 'Run bun run validate:bundle-artifacts before packaging.'
+Write-Output ("See {0} for the explicit runtime layout." -f (Join-Path $RepoRoot 'src-tauri/binaries/expected-layout.md'))

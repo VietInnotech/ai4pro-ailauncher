@@ -5,6 +5,15 @@ export type SimpleLocalAiStatus =
   | "stopping"
   | "needs_attention";
 
+export type SimpleModelStatus = "unchecked" | "ready" | "needs_attention";
+
+export type SimpleModelSummaryDto = {
+  id: string;
+  displayName: string;
+  status: SimpleModelStatus;
+  lastCheckedAt?: string;
+};
+
 export type SimpleLocalAiStatusDto = {
   status: SimpleLocalAiStatus;
   title: string;
@@ -12,6 +21,7 @@ export type SimpleLocalAiStatusDto = {
   canStart: boolean;
   canStop: boolean;
   canRestart: boolean;
+  modelSummaries: SimpleModelSummaryDto[];
 };
 
 export const defaultSimpleStatus: SimpleLocalAiStatusDto = {
@@ -20,5 +30,6 @@ export const defaultSimpleStatus: SimpleLocalAiStatusDto = {
   message: "Dịch vụ Local AI luôn sẵn sàng khi bạn cần.",
   canStart: true,
   canStop: false,
-  canRestart: false
+  canRestart: false,
+  modelSummaries: []
 };

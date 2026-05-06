@@ -8,10 +8,12 @@
     "dev": "vite",
     "build": "vite build",
     "check": "svelte-check --tsconfig ./tsconfig.json",
+    "validate:bundle-artifacts": "node scripts/validate-bundle-artifacts.mjs",
     "tauri": "tauri"
   },
   "dependencies": {
     "@tauri-apps/api": "^2.0.0",
+    "@tauri-apps/plugin-dialog": "^2.7.1",
     "svelte": "^5.0.0"
   },
   "devDependencies": {

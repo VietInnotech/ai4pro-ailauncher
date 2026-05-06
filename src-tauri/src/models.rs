@@ -42,6 +42,14 @@ pub enum SimpleLocalAiStatus {
     NeedsAttention,
 }
 
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq, Eq)]
+#[serde(rename_all = "snake_case")]
+pub enum SimpleModelStatus {
+    Unchecked,
+    Ready,
+    NeedsAttention,
+}
+
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct AppPathsDto {
@@ -187,6 +195,16 @@ pub struct SimpleLocalAiStatusDto {
     pub can_start: bool,
     pub can_stop: bool,
     pub can_restart: bool,
+    pub model_summaries: Vec<SimpleModelSummaryDto>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct SimpleModelSummaryDto {
+    pub id: String,
+    pub display_name: String,
+    pub status: SimpleModelStatus,
+    pub last_checked_at: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -201,6 +219,9 @@ pub struct DeveloperEngineProfileDto {
     pub binary_path: Option<String>,
     pub resolved_binary_path: Option<String>,
     pub model_package_id: Option<String>,
+    pub model_path: Option<String>,
+    pub model_dir: Option<String>,
+    pub tokens_path: Option<String>,
     pub resolved_model_path: Option<String>,
     pub resolved_model_dir: Option<String>,
     pub resolved_tokens_path: Option<String>,

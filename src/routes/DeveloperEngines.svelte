@@ -5,9 +5,10 @@
     devRestartEngineProfile,
     devStartEngineProfile,
     devStopEngineProfile,
+    devUpdateEngineProfile,
     devValidateEngineProfile
   } from "$lib/api/developer";
-  import type { DeveloperEngineProfileDto, ValidationResultDto } from "$lib/types/developer";
+  import type { DeveloperEngineProfileDto, UpdateEngineProfileDto, ValidationResultDto } from "$lib/types/developer";
   import DeveloperEngineDetail from "$lib/components/DeveloperEngineDetail.svelte";
   import DeveloperEngineTable from "$lib/components/DeveloperEngineTable.svelte";
 
@@ -18,6 +19,7 @@
   let selected: DeveloperEngineProfileDto | null = null;
   let validation: ValidationResultDto | null = null;
   let validationError = "";
+  let saveError = "";
   let busy = false;
 
   $: if (!selected && engines[0]) selected = engines[0];
@@ -27,6 +29,7 @@
     selected = engine;
     validation = null;
     validationError = "";
+    saveError = "";
   }
 
   async function refreshSelected(engineId: string) {
@@ -64,6 +67,23 @@
       busy = false;
     }
   }
+
+  async function saveSelectedConfig(engineId: string, input: UpdateEngineProfileDto) {
+    if (busy) return;
+
+    busy = true;
+    saveError = "";
+    validationError = "";
+    try {
+      selected = await devUpdateEngineProfile(engineId, input);
+      validation = await devValidateEngineProfile(engineId);
+      dispatch("reload");
+    } catch (error) {
+      saveError = error instanceof Error ? error.message : String(error);
+    } finally {
+      busy = false;
+    }
+  }
 </script>
 
 <section class="space-y-4">
@@ -73,11 +93,13 @@
     <DeveloperEngineDetail
       engine={selected}
       {busy}
+      {saveError}
       on:refresh={(event) => refreshSelected(event.detail)}
       on:validate={(event) => validateSelected(event.detail)}
       on:start={() => runAction("start")}
       on:stop={() => runAction("stop")}
       on:restart={() => runAction("restart")}
+      on:save={(event) => saveSelectedConfig(event.detail.id, event.detail.input)}
     />
 
     <section class="panel p-6">

@@ -10,9 +10,11 @@
     status: SimpleLocalAiStatusDto;
     loading: boolean;
     lastError?: string;
+    lastCheckedAt?: string;
   } = {
     status: defaultSimpleStatus,
-    loading: false
+    loading: false,
+    lastCheckedAt: undefined
   };
 
   const unsubscribe = localAiStore.subscribe((value: typeof state) => {
@@ -36,7 +38,9 @@
   status={state.status}
   busy={state.loading}
   notice={state.lastError ?? ""}
+  lastCheckedAt={state.lastCheckedAt}
   onLogoClick={handleLogoClick}
+  onRefresh={() => localAiStore.refresh()}
   onStart={() => localAiStore.start()}
   onStop={() => localAiStore.stop()}
   onRestart={() => localAiStore.restart()}

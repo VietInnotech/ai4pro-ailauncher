@@ -4,6 +4,9 @@ use crate::errors::{AppError, AppResult};
 use crate::models::{EngineKind, EngineProfileRecord};
 use crate::process_supervisor::LaunchSpec;
 
+#[cfg(all(target_os = "macos", not(target_arch = "aarch64")))]
+compile_error!("Only Apple Silicon macOS builds are supported.");
+
 #[derive(Debug, Clone, Copy)]
 pub struct LlamaCppAdapter;
 
@@ -57,7 +60,6 @@ fn current_binary_name(base: &str) -> &'static str {
     ) {
         (true, _, _) => Box::leak(format!("{base}.exe").into_boxed_str()),
         (false, true, true) => "llama-server-aarch64-apple-darwin",
-        (false, false, true) => "llama-server-x86_64-apple-darwin",
         _ => "llama-server-x86_64-pc-windows-msvc.exe",
     }
 }

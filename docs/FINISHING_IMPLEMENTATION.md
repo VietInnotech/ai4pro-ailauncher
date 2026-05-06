@@ -28,12 +28,31 @@ The repo already has a working scaffold for:
 These commands currently succeed:
 
 ```bash
+bun install --frozen-lockfile
 bun run check
 bun run build
-cd src-tauri && cargo check
+cd src-tauri
+cargo check
+cargo test
 ```
 
-`cargo check` still emits warnings.
+Preview packaging commands verified for `v0.1.0`:
+
+```bash
+bun run tauri build
+bun run tauri build --runner cargo-xwin --target x86_64-pc-windows-msvc --no-bundle
+```
+
+`cargo check`, `cargo test`, and release builds still emit dead-code warnings.
+There are no Rust unit tests yet.
+
+Tauri packaging now validates local runtime bundle inputs first:
+
+```bash
+bun run validate:bundle-artifacts
+```
+
+That command fails until required runtime artifacts are supplied under `src-tauri/bundle/`.
 
 ---
 
@@ -41,10 +60,10 @@ cd src-tauri && cargo check
 
 These are the real blockers in the current repo state:
 
-1. **Sherpa runtime strategy is not finished**
-   - `sherpa-onnx-vit` must be treated as a Python program
-   - the repo still needs a real packaged runtime or a validated developer-managed Python path
-2. **No real engine artifacts are present** in `src-tauri/binaries/` or `src-tauri/runtime/`
+1. **Real runtime artifacts still need to be supplied**
+   - release builds expect `llama-server` binaries and a packaged `sherpa-onnx-vit` Python runtime under `src-tauri/bundle/`
+   - model files remain outside the bundle under the app data root
+2. **End-to-end engine launch is not verified on target machines**
 3. **Health checks are minimal**
    - `src-tauri/src/health.rs` only does a TCP connect probe
 4. **Process supervision is incomplete**
@@ -53,7 +72,10 @@ These are the real blockers in the current repo state:
    - no runtime-state reconciliation from SQLite
    - no cleanup hook on app exit
 5. **Setup scripts are scaffolds only**
-6. **Tauri bundling is disabled** in `src-tauri/tauri.conf.json`
+6. **Production distribution is incomplete**
+   - macOS builds are unsigned and not notarized
+   - Windows cross-build produces an executable only, not an installer
+   - release builders must provide runtime artifacts locally before packaging
 
 ---
 
@@ -62,8 +84,8 @@ These are the real blockers in the current repo state:
 Do the work in this order:
 
 1. confirm real engine contracts
-2. resolve sherpa packaging strategy
-3. add real artifacts and models
+2. supply real bundled runtime artifacts
+3. add real model folders on prepared machines
 4. validate end-to-end launch locally
 5. finish runtime supervision and health checks
 6. finish setup scripts
@@ -212,21 +234,35 @@ Also preserve these explicit constraints:
 
 ## Phase 2 — Add real artifacts and validate manual launching
 
-### 1. Populate `src-tauri/binaries/`
+### 1. Populate `src-tauri/bundle/`
 
-For llama, this still means native sidecar binaries.
+For Apple Silicon macOS llama, provide the native server binary and its adjacent dylibs:
 
-For sherpa Option A, do **not** pretend a native bundled sidecar already exists.
-Choose one concrete path for this milestone:
+```text
+src-tauri/bundle/binaries/llama-server-aarch64-apple-darwin
+src-tauri/bundle/binaries/libllama*.dylib
+src-tauri/bundle/binaries/libggml*.dylib
+src-tauri/bundle/binaries/libmtmd*.dylib
+```
 
-- developer-managed Python install
-- packaged internal Python runtime/artifact per target OS
+For sherpa Option A on macOS, provide a packaged Python runtime:
+
+```text
+src-tauri/bundle/runtime/sherpa-onnx-vit/python3
+src-tauri/bundle/runtime/sherpa-onnx-vit/lib/python3.14/site-packages/sherpa_onnx_vit/
+src-tauri/bundle/runtime/sherpa-onnx-vit/lib/python3.14/site-packages/sherpa_onnx/
+src-tauri/bundle/runtime/sherpa-onnx-vit/lib/python3.14/models/vad/silero_vad.onnx
+src-tauri/bundle/runtime/sherpa-onnx-vit/<other Python runtime files>
+```
+
+Do not place model files under `src-tauri/bundle/`.
 
 ### 2. Prepare real model folders
 
-Prepare model folders under the resolved app data root and verify:
+Prepare model inputs under the resolved app data root, or configure absolute paths in Developer Mode, and verify:
 
-- llama GGUF path exists
+- one llama GGUF path exists
+- one sherpa model directory exists
 - sherpa model directory matches the pinned family contract
 - the required sherpa files are actually present
 
@@ -469,19 +505,24 @@ Primary file:
 
 - `src-tauri/tauri.conf.json`
 
-### 1. Enable Tauri bundling
+### 1. Maintain current preview packaging
 
-Finish:
+Already working:
 
-- sidecar inclusion
-- icons
-- build commands
-- release bundle output
+- Tauri bundling is enabled
+- macOS Apple Silicon `.app` and `.dmg` build
+- Tauri icon assets exist
+- Windows x64 executable cross-build works through `cargo-xwin`
+- Tauri resources include locally supplied runtime artifacts
+- app startup copies bundled `binaries/` and `runtime/` resources into the app data root
 
-For sherpa Option A, decide explicitly whether release bundling means:
+Still finish:
 
-- no sherpa bundling yet; developer-managed only
-- or an internal packaged Python runtime/artifact per OS
+- version bump process across `package.json`, `Cargo.toml`, and `tauri.conf.json`
+- installer output for Windows
+- real release notes and changelog discipline
+
+For sherpa Option A, release bundling means an internal packaged Python runtime per supported OS. Models are still excluded from the bundle.
 
 ### 2. Package for targets
 
@@ -498,6 +539,7 @@ Planned targets:
 - installer strategy
 - optional MSI
 - code signing if available
+- smoke test on a real Windows machine
 
 #### macOS
 
@@ -557,9 +599,13 @@ Use this as the conservative release checklist.
 ### Setup and packaging
 
 - [ ] machine init scripts are real
-- [ ] Tauri bundling enabled
-- [ ] packaging works on Windows
-- [ ] packaging works on macOS
+- [x] Tauri bundling enabled
+- [x] bundled runtime resource sync implemented
+- [x] build validation rejects missing runtime artifacts and bundled model files
+- [x] preview packaging works on macOS Apple Silicon
+- [x] Windows executable cross-build works through cargo-xwin
+- [ ] Windows installer packaging works
+- [ ] production signing/notarization works
 
 ---
 
@@ -569,7 +615,7 @@ The next concrete steps should be:
 
 1. pin one real `VietInnotech/sherpa-onnx-vit` commit and keep the launcher on `python -m sherpa_onnx_vit` unless a wrapper is intentionally introduced
 2. replace the current native `sherpa-onnx-server*` assumptions in code, defaults, and scripts
-3. place one real `llama-server` binary locally and prepare one real sherpa model directory for the pinned family
+3. place real `llama-server` binaries and a packaged sherpa runtime under `src-tauri/bundle/`
 4. update health checks from TCP-only probes to real HTTP readiness checks
 5. run the app and fix launch/health issues until Simple Mode can reliably show:
 

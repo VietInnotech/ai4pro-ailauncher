@@ -1,4 +1,4 @@
-import type { SimpleLocalAiStatus } from "$lib/types/local-ai";
+import type { SimpleLocalAiStatus, SimpleModelStatus } from "$lib/types/local-ai";
 
 export const UNAVAILABLE_LABEL = "Không có";
 
@@ -8,6 +8,12 @@ const simpleStatusLabels: Record<SimpleLocalAiStatus, string> = {
   ready: "sẵn sàng",
   stopping: "đang dừng",
   needs_attention: "cần chú ý"
+};
+
+const simpleModelStatusLabels: Record<SimpleModelStatus, string> = {
+  unchecked: "Chưa kiểm tra",
+  ready: "Sẵn sàng",
+  needs_attention: "Cần chú ý"
 };
 
 const engineStatusLabels: Record<string, string> = {
@@ -35,6 +41,10 @@ const logTypeLabels: Record<string, string> = {
 
 export function formatSimpleStatusLabel(status: SimpleLocalAiStatus): string {
   return simpleStatusLabels[status];
+}
+
+export function formatSimpleModelStatusLabel(status: SimpleModelStatus): string {
+  return simpleModelStatusLabels[status];
 }
 
 export function formatEngineStatusLabel(status: string): string {

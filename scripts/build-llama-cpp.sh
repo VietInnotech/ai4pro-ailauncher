@@ -31,7 +31,7 @@ done
 
 script_dir="$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)"
 : "${repo_root:=$(CDPATH= cd -- "$script_dir/.." && pwd)}"
-: "${output_dir:=$repo_root/src-tauri/binaries}"
+: "${output_dir:=$repo_root/src-tauri/bundle/binaries}"
 
 printf 'llama.cpp build scaffold\n'
 printf 'Repo root: %s\n' "$repo_root"
@@ -41,7 +41,6 @@ printf 'Output dir: %s\n' "$output_dir"
 if ((check_only)); then
   for name in \
     llama-server-aarch64-apple-darwin \
-    llama-server-x86_64-apple-darwin \
     llama-server-x86_64-pc-windows-msvc.exe; do
     if [[ -e "$output_dir/$name" ]]; then
       printf 'present: %s\n' "$name"
@@ -53,4 +52,4 @@ if ((check_only)); then
 fi
 
 printf 'No build is performed here.\n'
-printf 'Manually build llama.cpp for the target platform, then place the resulting llama-server binary into src-tauri/binaries/.\n'
+printf 'Manually build llama.cpp for the target platform, then place the resulting llama-server binary into src-tauri/bundle/binaries/.\n'

@@ -17,6 +17,10 @@ impl LocalAiService {
         self.engine_manager.simple_status()
     }
 
+    pub fn check_model(&self, id: &str) -> AppResult<SimpleLocalAiStatusDto> {
+        self.engine_manager.check_simple_model(id)
+    }
+
     pub fn start(&self) -> AppResult<SimpleLocalAiStatusDto> {
         self.engine_manager.start_all()?;
         self.status()
