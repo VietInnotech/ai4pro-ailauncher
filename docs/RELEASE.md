@@ -7,14 +7,14 @@ It is based on the commands verified for `v0.1.0`.
 
 The repo can currently produce:
 
-- an unsigned macOS Apple Silicon `.app` bundle
-- an unsigned macOS Apple Silicon `.dmg`
+- an ad-hoc signed macOS Apple Silicon `.app` bundle
+- an ad-hoc signed macOS Apple Silicon `.dmg`
 - a Windows x64 executable cross-built from macOS through `cargo-xwin`
 - packages that include locally supplied runtime artifacts from `src-tauri/bundle/`
 
 The repo does not yet produce:
 
-- a signed or notarized macOS app
+- a Developer ID signed or notarized macOS app
 - a Windows installer
 - signed Windows binaries
 - model-inclusive release artifacts
@@ -138,7 +138,36 @@ src-tauri/target/release/bundle/macos/Local AI.app
 src-tauri/target/release/bundle/dmg/Local AI_0.1.0_aarch64.dmg
 ```
 
-The current DMG is unsigned and not notarized. Users may see macOS Gatekeeper warnings.
+The current macOS build uses an ad-hoc signature through `bundle.macOS.signingIdentity = "-"` in `src-tauri/tauri.conf.json`. This creates a structurally valid signed app bundle for preview testing, but it is not Developer ID signed or notarized.
+
+Before publishing a DMG, verify both the app bundle and the image:
+
+```bash
+codesign --verify --deep --strict --verbose=4 \
+  "src-tauri/target/release/bundle/macos/Local AI.app"
+hdiutil verify "src-tauri/target/release/bundle/dmg/Local AI_0.1.0_aarch64.dmg"
+```
+
+Mount the DMG and verify the app that users will copy:
+
+```bash
+MOUNT_DIR="$(mktemp -d /tmp/local-ai-dmg.XXXXXX)"
+hdiutil attach -readonly -nobrowse -mountpoint "$MOUNT_DIR" \
+  "src-tauri/target/release/bundle/dmg/Local AI_0.1.0_aarch64.dmg"
+codesign --verify --deep --strict --verbose=4 "$MOUNT_DIR/Local AI.app"
+hdiutil detach "$MOUNT_DIR"
+```
+
+Gatekeeper assessment is still expected to reject preview artifacts because there is no Developer ID notarization:
+
+```bash
+spctl --assess --type execute --verbose=4 \
+  "src-tauri/target/release/bundle/macos/Local AI.app"
+spctl --assess --type open --context context:primary-signature --verbose=4 \
+  "src-tauri/target/release/bundle/dmg/Local AI_0.1.0_aarch64.dmg"
+```
+
+If `codesign --verify` reports `code has no resources but signature indicates they must be present`, do not publish that DMG. It means the outer `.app` bundle was not signed after resources were added, and macOS can show the misleading damaged-app dialog on another machine.
 
 ## macOS smoke test
 

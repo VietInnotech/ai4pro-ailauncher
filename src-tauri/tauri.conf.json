@@ -26,6 +26,9 @@
     "resources": {
       "bundle/binaries": "binaries",
       "bundle/runtime/sherpa-onnx-vit": "runtime/sherpa-onnx-vit"
+    },
+    "macOS": {
+      "signingIdentity": "-"
     }
   }
 }
