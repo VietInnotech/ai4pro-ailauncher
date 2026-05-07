@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onDestroy } from "svelte";
+  import { onDestroy, onMount } from "svelte";
   import {
     devGetDiagnosticsBundle,
     devListEngineProfiles,
@@ -9,7 +9,7 @@
   import DeveloperLayout from "$lib/components/DeveloperLayout.svelte";
   import DeveloperModeGate from "$lib/components/DeveloperModeGate.svelte";
   import { developerMode } from "$lib/stores/developer-mode";
-  import { localAiStore } from "$lib/stores/local-ai";
+  import { localAiStore, type LocalAiStoreState } from "$lib/stores/local-ai";
   import type {
     DeveloperEngineProfileDto,
     DeveloperModelPackageDto,
@@ -40,6 +40,11 @@
   let diagnostics: DiagnosticsBundleDto | null = null;
   let activeView: DeveloperView = "dashboard";
   let developerNotice = "";
+  let localAiState: LocalAiStoreState = {
+    status: defaultSimpleStatus,
+    loading: false,
+    lastCheckedAt: undefined
+  };
   let simpleStatus: SimpleLocalAiStatusDto = defaultSimpleStatus;
 
   const unsubscribeDeveloperMode = developerMode.subscribe((value) => {
@@ -51,7 +56,12 @@
   });
 
   const unsubscribeLocalAi = localAiStore.subscribe((value) => {
+    localAiState = value;
     simpleStatus = value.status;
+  });
+
+  onMount(() => {
+    void refreshVisibleRuntimeData();
   });
 
   onDestroy(() => {
@@ -59,20 +69,54 @@
     unsubscribeLocalAi();
   });
 
-  async function loadDeveloperData() {
+  async function loadDeveloperData(refreshSimpleStatus = true) {
     try {
       const [loadedEngines, loadedModels, loadedDiagnostics] = await Promise.all([
         devListEngineProfiles(),
         devListModelPackages(),
-        devGetDiagnosticsBundle(),
-        localAiStore.refresh()
+        devGetDiagnosticsBundle()
       ]);
 
       engines = loadedEngines;
       models = loadedModels;
       diagnostics = loadedDiagnostics;
+
+      if (refreshSimpleStatus) {
+        await localAiStore.refresh();
+      }
     } catch (error) {
       developerNotice = error instanceof Error ? error.message : "Không thể tải dữ liệu dành cho nhà phát triển.";
+    }
+  }
+
+  async function refreshVisibleRuntimeData() {
+    if (devEnabled) {
+      await loadDeveloperData();
+      return;
+    }
+
+    await localAiStore.refresh();
+  }
+
+  async function runLocalAiAction(action: "start" | "stop" | "restart") {
+    if (action === "start") {
+      await localAiStore.start();
+    } else if (action === "stop") {
+      await localAiStore.stop();
+    } else {
+      await localAiStore.restart();
+    }
+
+    if (devEnabled) {
+      await loadDeveloperData();
+    }
+  }
+
+  async function checkAllModels() {
+    await localAiStore.checkAllModels();
+
+    if (devEnabled) {
+      await loadDeveloperData();
     }
   }
 
@@ -93,14 +137,20 @@
 
 <div class="min-h-screen px-4 py-8 text-[#1b2430] sm:px-6 lg:px-8">
   <div class="mx-auto flex max-w-6xl flex-col gap-6">
-    <SimpleHome />
+    <SimpleHome
+      state={localAiState}
+      onRefresh={checkAllModels}
+      onStart={() => runLocalAiAction("start")}
+      onStop={() => runLocalAiAction("stop")}
+      onRestart={() => runLocalAiAction("restart")}
+    />
 
     <DeveloperModeGate enabled={devEnabled}>
       <section class="space-y-4">
         <div class="panel flex flex-col gap-3 px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between">
           <span>{developerNotice}</span>
           <div class="flex gap-2">
-            <button class="action-button-secondary" on:click={loadDeveloperData}>Làm mới dữ liệu nhà phát triển</button>
+            <button class="action-button-secondary" on:click={() => loadDeveloperData()}>Làm mới dữ liệu nhà phát triển</button>
             <button class="action-button-secondary" on:click={disableDeveloperMode}>Ẩn công cụ nhà phát triển</button>
           </div>
         </div>
@@ -120,11 +170,11 @@
 
         <DeveloperLayout>
           {#if activeView === "dashboard"}
-            <DeveloperDashboard {engines} {simpleStatus} on:reload={loadDeveloperData} />
+            <DeveloperDashboard {engines} {simpleStatus} on:reload={() => loadDeveloperData()} />
           {:else if activeView === "engines"}
-            <DeveloperEngines {engines} on:reload={loadDeveloperData} />
+            <DeveloperEngines {engines} on:reload={() => loadDeveloperData()} />
           {:else if activeView === "models"}
-            <DeveloperModels {models} on:reload={loadDeveloperData} />
+            <DeveloperModels {models} on:reload={() => loadDeveloperData()} />
           {:else if activeView === "logs"}
             <DeveloperLogs {engines} />
           {:else if activeView === "settings"}

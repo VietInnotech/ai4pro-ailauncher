@@ -142,14 +142,20 @@ impl EngineAdapter for SherpaOnnxAdapter {
             .and_then(|value| value.as_str())
         {
             let resolved = paths.app_root.join(runtime_dir);
-            env.push((
-                if cfg!(target_os = "windows") {
-                    "PYTHONHOME".into()
-                } else {
-                    "PYTHONPATH".into()
-                },
-                resolved.to_string_lossy().to_string(),
-            ));
+            if cfg!(target_os = "macos") {
+                env.push((
+                    "PYTHONHOME".into(),
+                    resolved
+                        .join("Frameworks/Python.framework/Versions/3.14")
+                        .to_string_lossy()
+                        .to_string(),
+                ));
+            } else if cfg!(target_os = "windows") {
+                env.push(("PYTHONHOME".into(), resolved.to_string_lossy().to_string()));
+            } else {
+                env.push(("PYTHONPATH".into(), resolved.to_string_lossy().to_string()));
+            }
+            env.push(("PYTHONNOUSERSITE".into(), "1".into()));
         }
 
         Ok(LaunchSpec {

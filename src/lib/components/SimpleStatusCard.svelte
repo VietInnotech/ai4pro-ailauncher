@@ -1,9 +1,9 @@
 <script lang="ts">
-  import { formatSimpleStatusLabel } from "$lib/labels";
+  import { formatSimpleModelStatusLabel, formatSimpleStatusLabel } from "$lib/labels";
   import StatusBadge from "$lib/components/StatusBadge.svelte";
   import LocalAiControl from "$lib/components/LocalAiControl.svelte";
   import SimpleErrorMessage from "$lib/components/SimpleErrorMessage.svelte";
-  import type { SimpleLocalAiStatusDto } from "$lib/types/local-ai";
+  import type { SimpleLocalAiStatusDto, SimpleModelStatus } from "$lib/types/local-ai";
 
   export let status: SimpleLocalAiStatusDto;
   export let busy = false;
@@ -23,6 +23,12 @@
     needs_attention: "danger"
   };
 
+  const modelBadgeTone: Record<SimpleModelStatus, "neutral" | "ok" | "warn" | "danger"> = {
+    unchecked: "neutral",
+    ready: "ok",
+    needs_attention: "danger"
+  };
+
   const lastCheckedFormatter = new Intl.DateTimeFormat("vi-VN", {
     dateStyle: "short",
     timeStyle: "medium"
@@ -31,14 +37,17 @@
   function formatLastCheckedAt(value?: string): string {
     if (!value) return "Chưa kiểm tra";
 
-    const date = new Date(value);
+    const numeric = Number(value);
+    const date = Number.isFinite(numeric)
+      ? new Date(value.length <= 10 ? numeric * 1000 : numeric)
+      : new Date(value);
     if (Number.isNaN(date.getTime())) return "Chưa kiểm tra";
 
     return lastCheckedFormatter.format(date);
   }
 </script>
 
-<section class="panel mx-auto flex w-full max-w-xl flex-col items-center gap-7 px-6 py-10 text-center sm:px-8">
+<section class="panel mx-auto flex w-full max-w-3xl flex-col items-center gap-6 px-4 py-8 text-center sm:gap-7 sm:px-8 sm:py-10">
   <button
     class="flex h-16 w-16 items-center justify-center rounded-lg border border-[#d5dce3] bg-[#1b2430] text-lg font-bold tracking-[0.12em] text-white transition hover:bg-[#263241]"
     aria-label="Logo ứng dụng"
@@ -47,16 +56,39 @@
     AI
   </button>
 
-  <div class="space-y-4">
+  <div class="w-full min-w-0 space-y-4">
     <StatusBadge tone={badgeTone[status.status]} text={formatSimpleStatusLabel(status.status)} />
     <div class="space-y-2">
-      <h1 class="text-[32px] font-semibold leading-tight text-[#1b2430]">{status.title}</h1>
-      <p class="max-w-md text-sm leading-6 text-[#5e6a79]">{status.message}</p>
+      <h1 class="mx-auto max-w-2xl text-2xl font-semibold leading-tight text-[#1b2430] sm:text-[32px]">{status.title}</h1>
+      <p class="mx-auto max-w-2xl text-sm leading-6 text-[#5e6a79]">{status.message}</p>
       <p class="text-xs font-medium uppercase tracking-[0.08em] text-[#7a8796]">
         Kiểm tra lần cuối: {formatLastCheckedAt(lastCheckedAt)}
       </p>
     </div>
   </div>
+
+  {#if status.modelSummaries.length > 0}
+    <section class="w-full rounded-lg border text-left" style="border-color: #d5dce3; background-color: #fcfcfd;">
+      <div class="border-b px-4 py-3 sm:px-5" style="border-color: #d5dce3;">
+        <h2 class="text-sm font-semibold text-[#1b2430]">Trạng thái mô hình</h2>
+      </div>
+      <ul class="divide-y" style="--tw-divide-opacity: 1; border-color: #d5dce3;">
+        {#each status.modelSummaries as model}
+          <li class="px-4 py-4 sm:px-5">
+            <div class="min-w-0 space-y-1">
+              <div class="flex min-w-0 flex-wrap items-center gap-2">
+                <p class="min-w-0 break-words text-sm font-semibold text-[#1b2430]">{model.displayName}</p>
+                <StatusBadge tone={modelBadgeTone[model.status]} text={formatSimpleModelStatusLabel(model.status)} />
+              </div>
+              <p class="text-xs font-medium uppercase tracking-[0.08em] text-[#7a8796]">
+                Kiểm tra: {formatLastCheckedAt(model.lastCheckedAt)}
+              </p>
+            </div>
+          </li>
+        {/each}
+      </ul>
+    </section>
+  {/if}
 
   <LocalAiControl
     canStart={status.canStart}

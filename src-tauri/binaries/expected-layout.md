@@ -24,6 +24,7 @@ Sherpa Option A is **not** a native sidecar in this repo.
 Expected packaged runtime shape:
 
 - `src-tauri/bundle/runtime/sherpa-onnx-vit/python3` on macOS
+- `src-tauri/bundle/runtime/sherpa-onnx-vit/Frameworks/Python.framework/Versions/3.14/Python` on macOS
 - packaged Python site-packages containing `sherpa_onnx_vit`
 - packaged Python site-packages containing `sherpa_onnx`
 - `src-tauri/bundle/runtime/sherpa-onnx-vit/lib/python3.14/models/vad/silero_vad.onnx`
@@ -48,6 +49,16 @@ Upstream contract pinned from:
 Preferred launch shape in this repo:
 
 - `python -m sherpa_onnx_vit`
+
+The macOS runtime must be relocatable. Do not ship a venv whose `python3` or
+`bin/python*` resolves into `/opt/homebrew`, `/usr/local`, or a developer home
+directory. After producing the venv, run:
+
+- `scripts/build-sherpa-onnx.sh --repair-macos-runtime`
+
+That repair step vendors `Python.framework`, patches the root interpreter for
+the app launch path, patches the `bin/` interpreter for console-script usage,
+and smoke-tests imports with `PYTHONHOME` pointed at the bundled framework.
 
 Upstream may also expose:
 

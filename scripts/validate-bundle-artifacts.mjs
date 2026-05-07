@@ -1,6 +1,16 @@
 #!/usr/bin/env node
-import { accessSync, constants, existsSync, readdirSync, statSync } from 'node:fs';
-import { join, relative, sep } from 'node:path';
+import { spawnSync } from 'node:child_process';
+import {
+  accessSync,
+  constants,
+  existsSync,
+  lstatSync,
+  readFileSync,
+  readlinkSync,
+  readdirSync,
+  statSync,
+} from 'node:fs';
+import { isAbsolute, join, relative, resolve, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const scriptDir = fileURLToPath(new URL('.', import.meta.url));
@@ -23,6 +33,7 @@ const targetArtifacts = {
       'binaries/libggml-rpc.0.dylib',
       'binaries/libggml-base.0.dylib',
       'runtime/sherpa-onnx-vit/python3',
+      'runtime/sherpa-onnx-vit/Frameworks/Python.framework/Versions/3.14/Python',
       'runtime/sherpa-onnx-vit/lib/python3.14/models/vad/silero_vad.onnx',
     ],
     requiredDirectories: [
@@ -71,6 +82,7 @@ const allowedRuntimeModelLikePaths = new Set([
 ]);
 
 const errors = [];
+const warnings = [];
 
 function relativePath(path) {
   return relative(bundleRoot, path).split(sep).join('/');
@@ -127,6 +139,124 @@ function walk(dir, visitor) {
   }
 }
 
+function isInsideBundle(path) {
+  const rel = relative(bundleRoot, path);
+  return rel === '' || (!rel.startsWith('..') && !isAbsolute(rel));
+}
+
+function forbidEscapingSymlink(path) {
+  const fullPath = join(bundleRoot, path);
+  if (!existsSync(fullPath)) {
+    return;
+  }
+
+  const metadata = lstatSync(fullPath);
+  if (!metadata.isSymbolicLink()) {
+    return;
+  }
+
+  const link = readlinkSync(fullPath);
+  const resolved = resolve(join(fullPath, '..'), link);
+  if (isAbsolute(link) || !isInsideBundle(resolved)) {
+    errors.push(`bundled symlink must stay inside src-tauri/bundle: src-tauri/bundle/${path} -> ${link}`);
+  }
+}
+
+function forbidHostLinkedMachO(path) {
+  if (process.platform !== 'darwin') {
+    return;
+  }
+
+  if (path.endsWith('.a')) {
+    return;
+  }
+
+  const fullPath = join(bundleRoot, path);
+  if (!existsSync(fullPath)) {
+    return;
+  }
+
+  if (!isMachO(fullPath)) {
+    return;
+  }
+
+  const result = spawnSync('otool', ['-L', fullPath], { encoding: 'utf8' });
+  if (result.error) {
+    warnings.push(`could not inspect Mach-O links for src-tauri/bundle/${path}: ${result.error.message}`);
+    return;
+  }
+
+  if (result.status !== 0) {
+    return;
+  }
+
+  const forbiddenRefs = result.stdout
+    .split('\n')
+    .slice(1)
+    .map((line) => line.trim().split(/\s+/)[0])
+    .filter((ref) => /^\/(opt\/homebrew|usr\/local|Users)\//.test(ref));
+
+  for (const ref of forbiddenRefs) {
+    errors.push(`bundled Mach-O artifact must not link to host path: src-tauri/bundle/${path} -> ${ref}`);
+  }
+}
+
+function isMachO(path) {
+  const header = readFileSync(path, { encoding: null, flag: 'r' }).subarray(0, 4);
+  if (header.length < 4) {
+    return false;
+  }
+
+  const magic = header.readUInt32BE(0);
+  return (
+    magic === 0xfeedface ||
+    magic === 0xcefaedfe ||
+    magic === 0xfeedfacf ||
+    magic === 0xcffaedfe ||
+    magic === 0xcafebabe ||
+    magic === 0xbebafeca
+  );
+}
+
+function smokeTestMacSherpaRuntime() {
+  if (target !== 'darwin-arm64' || process.platform !== 'darwin') {
+    return;
+  }
+
+  const python = join(bundleRoot, 'runtime/sherpa-onnx-vit/python3');
+  if (!existsSync(python)) {
+    return;
+  }
+
+  const pythonHome = join(
+    bundleRoot,
+    'runtime/sherpa-onnx-vit/Frameworks/Python.framework/Versions/3.14',
+  );
+  const result = spawnSync(
+    python,
+    ['-c', 'import fastapi, uvicorn, sherpa_onnx, sherpa_onnx_vit; print("sherpa runtime ok")'],
+    {
+      encoding: 'utf8',
+      env: {
+        ...process.env,
+        PYTHONHOME: pythonHome,
+        PYTHONNOUSERSITE: '1',
+      },
+      timeout: 30_000,
+    },
+  );
+
+  if (result.error) {
+    errors.push(`macOS sherpa runtime smoke test failed: ${result.error.message}`);
+    return;
+  }
+
+  if (result.status !== 0) {
+    const detail = [result.stderr.trim(), result.stdout.trim()].filter(Boolean).join('\n');
+    errors.push(`macOS sherpa runtime smoke test failed.${detail ? `\n${detail}` : ''}`);
+  }
+}
+
 for (const file of selectedArtifacts.requiredFiles) {
   requireFile(file);
 }
@@ -144,7 +274,7 @@ if (!existsSync(join(bundleRoot, 'runtime', 'sherpa-onnx-vit'))) {
 }
 
 walk(bundleRoot, (fullPath, entry) => {
-  if (!entry.isFile() && !entry.isDirectory()) {
+  if (!entry.isFile() && !entry.isDirectory() && !entry.isSymbolicLink()) {
     return;
   }
 
@@ -152,7 +282,21 @@ walk(bundleRoot, (fullPath, entry) => {
   if (!allowedRuntimeModelLikePaths.has(rel) && forbiddenModelPatterns.some((pattern) => pattern.test(rel))) {
     errors.push(`model-like file/path must not be bundled: src-tauri/bundle/${rel}`);
   }
+
+  if (entry.isSymbolicLink()) {
+    forbidEscapingSymlink(rel);
+  }
+
+  if (
+    target === 'darwin-arm64' &&
+    entry.isFile() &&
+    (rel.startsWith('runtime/sherpa-onnx-vit/') || rel.startsWith('binaries/'))
+  ) {
+    forbidHostLinkedMachO(rel);
+  }
 });
+
+smokeTestMacSherpaRuntime();
 
 if (errors.length > 0) {
   console.error('Bundle artifact validation failed.');
@@ -163,6 +307,10 @@ if (errors.length > 0) {
   console.error('');
   console.error('Provide runtime artifacts under src-tauri/bundle/. Model files must stay under the app data models/ directory on target machines.');
   process.exit(1);
+}
+
+for (const warning of warnings) {
+  console.warn(`warning: ${warning}`);
 }
 
 console.log(`Bundle artifact validation passed for ${target}.`);

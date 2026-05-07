@@ -60,10 +60,10 @@
         selected = await devRestartEngineProfile(selected.id);
       }
       validation = await devValidateEngineProfile(selected.id);
-      dispatch("reload");
     } catch (error) {
       validationError = error instanceof Error ? error.message : String(error);
     } finally {
+      dispatch("reload");
       busy = false;
     }
   }
@@ -77,10 +77,10 @@
     try {
       selected = await devUpdateEngineProfile(engineId, input);
       validation = await devValidateEngineProfile(engineId);
-      dispatch("reload");
     } catch (error) {
       saveError = error instanceof Error ? error.message : String(error);
     } finally {
+      dispatch("reload");
       busy = false;
     }
   }

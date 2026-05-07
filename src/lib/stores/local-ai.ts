@@ -1,5 +1,6 @@
-import { writable } from "svelte/store";
+import { get, writable } from "svelte/store";
 import {
+  checkSimpleModelStatus,
   getSimpleLocalAiStatus,
   restartLocalAi,
   startLocalAi,
@@ -24,7 +25,7 @@ function errorMessage(error: unknown): string {
   return "Lỗi không mong đợi";
 }
 
-type LocalAiStoreState = {
+export type LocalAiStoreState = {
   status: SimpleLocalAiStatusDto;
   loading: boolean;
   lastError?: string;
@@ -50,10 +51,25 @@ function createLocalAiStore() {
         lastError: undefined
       }));
     } catch (error) {
+      const message = errorMessage(error);
+
+      try {
+        const status = await getSimpleLocalAiStatus();
+        update(() => ({
+          status,
+          loading: false,
+          lastCheckedAt: new Date().toISOString(),
+          lastError: message
+        }));
+        return;
+      } catch {
+        // Keep the original action error visible. A failed recovery refresh should not replace it.
+      }
+
       update((state) => ({
         ...state,
         loading: false,
-        lastError: errorMessage(error)
+        lastError: message
       }));
     }
   }
@@ -65,6 +81,21 @@ function createLocalAiStore() {
     },
     refresh() {
       return run(getSimpleLocalAiStatus);
+    },
+    checkAllModels() {
+      return run(async () => {
+        let status = await getSimpleLocalAiStatus();
+        const current = get({ subscribe });
+        const modelIds = current.status.modelSummaries.length > 0
+          ? current.status.modelSummaries.map((model) => model.id)
+          : status.modelSummaries.map((model) => model.id);
+
+        for (const id of modelIds) {
+          status = await checkSimpleModelStatus(id);
+        }
+
+        return status;
+      });
     },
     start() {
       return run(startLocalAi);

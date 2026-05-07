@@ -127,13 +127,34 @@ impl EngineManager {
             .load_engine_profile(id)?
             .ok_or_else(|| AppError::new("ENGINE_NOT_FOUND", "Không tìm thấy hồ sơ động cơ."))?;
         let mut validation = validate_profile(&profile, &self.paths.app_root)?;
-        if !ports::port_is_available(profile.port) && profile.status == EngineStatus::Stopped {
+        if self.profile_health_ok(&profile, 300)? {
+            for issue in &mut validation.issues {
+                if issue.severity == "error" && issue.code != "INVALID_HOST" {
+                    issue.severity = "warning".to_string();
+                }
+            }
             validation.issues.push(ValidationIssueDto {
-                severity: "error".to_string(),
-                code: "PORT_IN_USE".to_string(),
-                message: format!("Cổng {} đã được sử dụng trên 127.0.0.1.", profile.port),
+                severity: "info".to_string(),
+                code: "SERVICE_HEALTHY".to_string(),
+                message: "Dịch vụ đang phản hồi trên cổng đã cấu hình.".to_string(),
             });
-            validation.valid = false;
+            validation.valid = validation.issues.iter().all(|issue| issue.severity != "error");
+        }
+        if !ports::port_is_available(profile.port) && profile.status == EngineStatus::Stopped {
+            if self.profile_health_ok(&profile, 300)? {
+                validation.issues.push(ValidationIssueDto {
+                    severity: "info".to_string(),
+                    code: "SERVICE_ALREADY_RUNNING".to_string(),
+                    message: "Dịch vụ đã phản hồi trên cổng đã cấu hình.".to_string(),
+                });
+            } else {
+                validation.issues.push(ValidationIssueDto {
+                    severity: "error".to_string(),
+                    code: "PORT_IN_USE".to_string(),
+                    message: format!("Cổng {} đã được sử dụng trên 127.0.0.1.", profile.port),
+                });
+                validation.valid = false;
+            }
         }
         validation.generated_args = self.generated_args(&profile);
         Ok(validation)
@@ -259,6 +280,17 @@ impl EngineManager {
             .load_engine_profile(id)?
             .ok_or_else(|| AppError::new("ENGINE_NOT_FOUND", "Không tìm thấy hồ sơ động cơ."))?;
 
+        if self.profile_health_ok(&profile, 300)? {
+            self.adopt_running_profile(&profile)?;
+            return Ok(ProcessSnapshotDto {
+                id: profile.id.clone(),
+                status: EngineStatus::Running,
+                pid: profile.pid,
+                last_error: None,
+                last_exit_code: None,
+            });
+        }
+
         let validation = self.validate_engine_profile(&profile.id)?;
         if !validation.valid {
             return Err(AppError::new("INVALID_CONFIG", "Hồ sơ động cơ không vượt qua kiểm tra."));
@@ -343,100 +375,17 @@ impl EngineManager {
 
         let profiles = self.db.list_engine_profiles()?;
         let enabled_profiles: Vec<_> = profiles.iter().filter(|profile| profile.enabled).collect();
-        let model_summaries = self
-            .db
-            .list_model_packages()?
-            .into_iter()
-            .map(simple_model_summary_from_record)
+        let model_summaries = simple_model_summaries_from_records(
+            self.db.list_model_packages()?,
+            &enabled_profiles,
+        );
+
+        let enabled_statuses: Vec<_> = enabled_profiles
+            .iter()
+            .map(|profile| profile.status.clone())
             .collect();
 
-        if enabled_profiles.is_empty() {
-            return Ok(SimpleLocalAiStatusDto {
-                status: SimpleLocalAiStatus::NeedsAttention,
-                title: "Local AI chưa sẵn sàng".to_string(),
-                message: "Local AI chưa được cấu hình. Vui lòng liên hệ bộ phận hỗ trợ.".to_string(),
-                can_start: false,
-                can_stop: false,
-                can_restart: true,
-                model_summaries,
-            });
-        }
-
-        let running = enabled_profiles
-            .iter()
-            .filter(|profile| profile.status == EngineStatus::Running)
-            .count();
-        let starting = enabled_profiles
-            .iter()
-            .any(|profile| profile.status == EngineStatus::Starting);
-        let stopping = enabled_profiles
-            .iter()
-            .any(|profile| profile.status == EngineStatus::Stopping);
-        let needs_attention = enabled_profiles.iter().any(|profile| {
-            matches!(
-                profile.status,
-                EngineStatus::Unhealthy
-                    | EngineStatus::Crashed
-                    | EngineStatus::MissingBinary
-                    | EngineStatus::MissingModel
-                    | EngineStatus::InvalidConfig
-                    | EngineStatus::PortConflict
-            )
-        });
-
-        let dto = if running == enabled_profiles.len() {
-            SimpleLocalAiStatusDto {
-                status: SimpleLocalAiStatus::Ready,
-                title: "Local AI đang hoạt động".to_string(),
-                message: "Dịch vụ Local AI hiện khả dụng.".to_string(),
-                can_start: false,
-                can_stop: true,
-                can_restart: true,
-                model_summaries: model_summaries.clone(),
-            }
-        } else if stopping {
-            SimpleLocalAiStatusDto {
-                status: SimpleLocalAiStatus::Stopping,
-                title: "Local AI đang dừng".to_string(),
-                message: "Vui lòng chờ...".to_string(),
-                can_start: false,
-                can_stop: false,
-                can_restart: false,
-                model_summaries: model_summaries.clone(),
-            }
-        } else if starting || running > 0 {
-            SimpleLocalAiStatusDto {
-                status: SimpleLocalAiStatus::Starting,
-                title: "Local AI đang khởi động".to_string(),
-                message: "Vui lòng chờ...".to_string(),
-                can_start: false,
-                can_stop: true,
-                can_restart: false,
-                model_summaries: model_summaries.clone(),
-            }
-        } else if needs_attention {
-            SimpleLocalAiStatusDto {
-                status: SimpleLocalAiStatus::NeedsAttention,
-                title: "Local AI cần được chú ý".to_string(),
-                message: "Không thể khởi động Local AI. Vui lòng liên hệ bộ phận hỗ trợ.".to_string(),
-                can_start: false,
-                can_stop: false,
-                can_restart: true,
-                model_summaries: model_summaries.clone(),
-            }
-        } else {
-            SimpleLocalAiStatusDto {
-                status: SimpleLocalAiStatus::NotRunning,
-                title: "Local AI đã sẵn sàng".to_string(),
-                message: "Dịch vụ Local AI luôn sẵn sàng khi bạn cần.".to_string(),
-                can_start: true,
-                can_stop: false,
-                can_restart: false,
-                model_summaries: model_summaries.clone(),
-            }
-        };
-
-        Ok(dto)
+        Ok(simple_status_from_engine_statuses(&enabled_statuses, model_summaries))
     }
 
     pub fn process_snapshots(&self) -> Vec<ProcessSnapshotDto> {
@@ -643,15 +592,23 @@ impl EngineManager {
     }
 
     fn wait_for_profile_health(&self, profile: &EngineProfileRecord) -> AppResult<bool> {
-        match profile.kind {
-            EngineKind::LlamaCpp => health::wait_for_http_any(&profile.host, profile.port, &["/health", "/v1/models", "/props", "/"], 10_000),
-            EngineKind::SherpaOnnx => health::wait_for_http_any(&profile.host, profile.port, &["/health", "/v1/models"], 12_000),
+        health::wait_for_http_any(&profile.host, profile.port, health_paths_for_kind(&profile.kind), startup_health_timeout_ms(&profile.kind))
+    }
+
+    fn profile_health_ok(&self, profile: &EngineProfileRecord, timeout_ms: u64) -> AppResult<bool> {
+        for path in health_paths_for_kind(&profile.kind) {
+            if health::http_get_ok(&profile.host, profile.port, path, timeout_ms)? {
+                return Ok(true);
+            }
         }
+
+        Ok(false)
     }
 
     fn refresh_runtime_state(&self) -> AppResult<()> {
         self.supervisor.refresh();
-        for snapshot in self.supervisor.snapshots() {
+        let snapshots = self.supervisor.snapshots();
+        for snapshot in &snapshots {
             if let Some(mut profile) = self.db.load_engine_profile(&snapshot.id)? {
                 profile.status = snapshot.status.clone();
                 profile.pid = snapshot.pid;
@@ -669,7 +626,36 @@ impl EngineManager {
                 self.db.upsert_runtime_state(&self.runtime_state_for_profile(&profile))?;
             }
         }
+
+        let supervised_ids = snapshots
+            .iter()
+            .map(|snapshot| snapshot.id.as_str())
+            .collect::<std::collections::HashSet<_>>();
+        for mut profile in self.db.list_engine_profiles()? {
+            if !profile.enabled || supervised_ids.contains(profile.id.as_str()) {
+                continue;
+            }
+
+            if self.profile_health_ok(&profile, 250)? {
+                profile.status = EngineStatus::Running;
+                profile.last_error = None;
+                profile.last_exit_code = None;
+                profile.updated_at = crate::models::now_timestamp();
+                self.db.upsert_engine_profile(&profile)?;
+                self.db.upsert_runtime_state(&self.runtime_state_for_profile(&profile))?;
+            }
+        }
         Ok(())
+    }
+
+    fn adopt_running_profile(&self, profile: &EngineProfileRecord) -> AppResult<()> {
+        let mut adopted = profile.clone();
+        adopted.status = EngineStatus::Running;
+        adopted.last_error = None;
+        adopted.last_exit_code = None;
+        adopted.updated_at = crate::models::now_timestamp();
+        self.db.upsert_engine_profile(&adopted)?;
+        self.db.upsert_runtime_state(&self.runtime_state_for_profile(&adopted))
     }
 
     fn reconcile_runtime_state(&self) -> AppResult<()> {
@@ -742,9 +728,55 @@ fn status_name(status: &EngineStatus) -> &'static str {
     }
 }
 
-fn simple_model_summary_from_record(package: ModelPackageRecord) -> SimpleModelSummaryDto {
+fn health_paths_for_kind(kind: &EngineKind) -> &'static [&'static str] {
+    match kind {
+        EngineKind::LlamaCpp => &["/health", "/v1/models", "/props", "/"],
+        EngineKind::SherpaOnnx => &["/health", "/v1/models"],
+    }
+}
+
+fn startup_health_timeout_ms(kind: &EngineKind) -> u64 {
+    match kind {
+        EngineKind::LlamaCpp => 10_000,
+        EngineKind::SherpaOnnx => 12_000,
+    }
+}
+
+fn simple_model_summaries_from_records(
+    packages: Vec<ModelPackageRecord>,
+    enabled_profiles: &[&EngineProfileRecord],
+) -> Vec<SimpleModelSummaryDto> {
+    packages
+        .into_iter()
+        .map(|package| simple_model_summary_from_record(package, enabled_profiles))
+        .collect()
+}
+
+fn simple_model_summary_from_record(
+    package: ModelPackageRecord,
+    enabled_profiles: &[&EngineProfileRecord],
+) -> SimpleModelSummaryDto {
+    let linked_statuses: Vec<_> = enabled_profiles
+        .iter()
+        .filter(|profile| profile.model_package_id.as_deref() == Some(package.id.as_str()))
+        .map(|profile| &profile.status)
+        .collect();
+
     let status = if package.verified {
         SimpleModelStatus::Ready
+    } else if linked_statuses.iter().any(|status| **status == EngineStatus::Running) {
+        SimpleModelStatus::Ready
+    } else if linked_statuses.iter().any(|status| {
+        matches!(
+            **status,
+            EngineStatus::Unhealthy
+                | EngineStatus::Crashed
+                | EngineStatus::MissingModel
+                | EngineStatus::InvalidConfig
+                | EngineStatus::PortConflict
+        )
+    }) {
+        SimpleModelStatus::NeedsAttention
     } else if package.last_verified_at.is_some() {
         SimpleModelStatus::NeedsAttention
     } else {
@@ -759,10 +791,178 @@ fn simple_model_summary_from_record(package: ModelPackageRecord) -> SimpleModelS
     }
 }
 
+fn simple_status_from_engine_statuses(
+    enabled_statuses: &[EngineStatus],
+    model_summaries: Vec<SimpleModelSummaryDto>,
+) -> SimpleLocalAiStatusDto {
+    if enabled_statuses.is_empty() {
+        return SimpleLocalAiStatusDto {
+            status: SimpleLocalAiStatus::NeedsAttention,
+            title: "Local AI chưa sẵn sàng".to_string(),
+            message: "Local AI chưa được cấu hình. Vui lòng liên hệ bộ phận hỗ trợ.".to_string(),
+            can_start: false,
+            can_stop: false,
+            can_restart: true,
+            model_summaries,
+        };
+    }
+
+    let running = enabled_statuses
+        .iter()
+        .filter(|status| **status == EngineStatus::Running)
+        .count();
+    let stopped = enabled_statuses
+        .iter()
+        .filter(|status| **status == EngineStatus::Stopped)
+        .count();
+    let starting = enabled_statuses
+        .iter()
+        .any(|status| *status == EngineStatus::Starting);
+    let stopping = enabled_statuses
+        .iter()
+        .any(|status| *status == EngineStatus::Stopping);
+    let needs_attention = enabled_statuses.iter().any(|status| {
+        matches!(
+            status,
+            EngineStatus::Unhealthy
+                | EngineStatus::Crashed
+                | EngineStatus::MissingBinary
+                | EngineStatus::MissingModel
+                | EngineStatus::InvalidConfig
+                | EngineStatus::PortConflict
+        )
+    });
+
+    if running == enabled_statuses.len() {
+        SimpleLocalAiStatusDto {
+            status: SimpleLocalAiStatus::Ready,
+            title: "Local AI đang hoạt động".to_string(),
+            message: "Dịch vụ Local AI hiện khả dụng.".to_string(),
+            can_start: false,
+            can_stop: true,
+            can_restart: true,
+            model_summaries,
+        }
+    } else if stopping {
+        SimpleLocalAiStatusDto {
+            status: SimpleLocalAiStatus::Stopping,
+            title: "Local AI đang dừng".to_string(),
+            message: "Vui lòng chờ...".to_string(),
+            can_start: false,
+            can_stop: false,
+            can_restart: false,
+            model_summaries,
+        }
+    } else if starting {
+        SimpleLocalAiStatusDto {
+            status: SimpleLocalAiStatus::Starting,
+            title: "Local AI đang khởi động".to_string(),
+            message: "Vui lòng chờ...".to_string(),
+            can_start: false,
+            can_stop: true,
+            can_restart: false,
+            model_summaries,
+        }
+    } else if needs_attention {
+        SimpleLocalAiStatusDto {
+            status: SimpleLocalAiStatus::NeedsAttention,
+            title: "Local AI cần được chú ý".to_string(),
+            message: "Không thể khởi động Local AI. Vui lòng liên hệ bộ phận hỗ trợ.".to_string(),
+            can_start: false,
+            can_stop: false,
+            can_restart: true,
+            model_summaries,
+        }
+    } else if running > 0 && stopped > 0 {
+        SimpleLocalAiStatusDto {
+            status: SimpleLocalAiStatus::NeedsAttention,
+            title: "Local AI chưa sẵn sàng".to_string(),
+            message: "Local AI chỉ khởi động một phần. Vui lòng thử khởi động lại hoặc liên hệ bộ phận hỗ trợ.".to_string(),
+            can_start: false,
+            can_stop: true,
+            can_restart: true,
+            model_summaries,
+        }
+    } else {
+        SimpleLocalAiStatusDto {
+            status: SimpleLocalAiStatus::NotRunning,
+            title: "Local AI đã sẵn sàng".to_string(),
+            message: "Dịch vụ Local AI luôn sẵn sàng khi bạn cần.".to_string(),
+            can_start: true,
+            can_stop: false,
+            can_restart: false,
+            model_summaries,
+        }
+    }
+}
+
 fn missing_model_issue(required: &str) -> ValidationIssueDto {
     ValidationIssueDto {
         severity: "error".to_string(),
         code: "MISSING_MODEL".to_string(),
         message: format!("Tệp mô hình bắt buộc hiện không khả dụng: {required}"),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    fn aggregate(statuses: &[EngineStatus]) -> SimpleLocalAiStatusDto {
+        simple_status_from_engine_statuses(statuses, vec![])
+    }
+
+    #[test]
+    fn simple_status_requires_configuration_when_no_engines_enabled() {
+        let status = aggregate(&[]);
+
+        assert_eq!(status.status, SimpleLocalAiStatus::NeedsAttention);
+        assert!(!status.can_start);
+        assert!(status.can_restart);
+    }
+
+    #[test]
+    fn simple_status_is_ready_when_all_enabled_engines_are_running() {
+        let status = aggregate(&[EngineStatus::Running, EngineStatus::Running]);
+
+        assert_eq!(status.status, SimpleLocalAiStatus::Ready);
+        assert!(status.can_stop);
+        assert!(status.can_restart);
+    }
+
+    #[test]
+    fn simple_status_is_starting_only_for_active_startup() {
+        let status = aggregate(&[EngineStatus::Running, EngineStatus::Starting]);
+
+        assert_eq!(status.status, SimpleLocalAiStatus::Starting);
+        assert!(status.can_stop);
+        assert!(!status.can_restart);
+    }
+
+    #[test]
+    fn simple_status_reports_attention_for_unhealthy_engine() {
+        let status = aggregate(&[EngineStatus::Running, EngineStatus::Unhealthy]);
+
+        assert_eq!(status.status, SimpleLocalAiStatus::NeedsAttention);
+        assert!(!status.can_start);
+        assert!(status.can_restart);
+    }
+
+    #[test]
+    fn simple_status_reports_attention_for_stable_partial_start() {
+        let status = aggregate(&[EngineStatus::Running, EngineStatus::Stopped]);
+
+        assert_eq!(status.status, SimpleLocalAiStatus::NeedsAttention);
+        assert!(status.can_stop);
+        assert!(status.can_restart);
+    }
+
+    #[test]
+    fn simple_status_is_not_running_when_all_enabled_engines_are_stopped() {
+        let status = aggregate(&[EngineStatus::Stopped, EngineStatus::Stopped]);
+
+        assert_eq!(status.status, SimpleLocalAiStatus::NotRunning);
+        assert!(status.can_start);
+        assert!(!status.can_stop);
     }
 }
