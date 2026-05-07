@@ -86,6 +86,7 @@ For Apple Silicon macOS it now checks the actual runtime dependency set: `llama-
 
 - Bun workflow with `bun.lock`
 - Cargo workflow with `Cargo.lock`
+- repo `justfile` for install/check/build/version/tag helper workflows
 - `src-tauri/binaries/` expected layout documentation (updated for sherpa Python runtime)
 - machine setup scaffolding scripts (`initialize-machine-config.sh`, `initialize-machine-config.ps1`)
 - sidecar preparation/build scaffolding scripts (`prepare-sidecars.sh`, `prepare-sidecars.ps1`)

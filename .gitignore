@@ -1,6 +1,5 @@
 node_modules/
 dist/
-bun.lockb
 src-tauri/target/
 data/
 *.log
@@ -14,4 +13,3 @@ government-meeting.mp3
 
 # macOS
 .DS_Store
-

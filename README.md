@@ -53,6 +53,7 @@ Install these before building:
 
 - Bun 1.3.x
 - Rust and Cargo
+- `just` (recommended for the repo task runner)
 - Tauri platform prerequisites for macOS builds
 - GitHub CLI (`gh`) if publishing releases
 - `cargo-xwin` and the Rust Windows MSVC target if cross-building Windows from macOS
@@ -115,6 +116,30 @@ Run the Tauri app in development:
 ```bash
 bun run tauri dev
 ```
+
+If you use `just`, the repo also exposes the common workflows as recipes:
+
+```bash
+just install
+just check
+just test
+just build-frontend
+just build-desktop
+just build-windows
+just release-check
+```
+
+Versioning and release-tag helpers:
+
+```bash
+just version
+just version-check
+just set-version 0.1.1
+just tag-check 0.1.1
+just tag-release 0.1.1
+```
+
+`just tag-release <version>` creates the local annotated tag only. Review and push it separately.
 
 ### Local real-asset testing
 
@@ -193,6 +218,12 @@ bun run build
 cd src-tauri
 cargo check
 cargo test
+```
+
+Or, with the repo task runner:
+
+```bash
+just release-check
 ```
 
 Verified during the `v0.1.0` release:

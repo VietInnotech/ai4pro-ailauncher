@@ -28,10 +28,13 @@ Deployment instructions for published preview builds live in [DEPLOYMENT.md](DEP
 Install the local toolchain:
 
 ```bash
+just --version
 bun --version
 cargo --version
 gh --version
 ```
+
+`just` is optional but recommended. The repo `justfile` wraps the verified install, check, build, versioning, and tagging flows.
 
 The expected package manager is declared in `package.json`:
 
@@ -99,6 +102,12 @@ Install dependencies exactly from the lockfile:
 
 ```bash
 bun install --frozen-lockfile
+```
+
+Or run the full verified release baseline with:
+
+```bash
+just release-check
 ```
 
 Run frontend and Rust checks:
@@ -290,11 +299,27 @@ The `--no-bundle` flag is intentional for the current scaffold. It validates the
 Use the version from `package.json`, `src-tauri/Cargo.toml`, and `src-tauri/tauri.conf.json`.
 For `0.1.0`, the tag is `v0.1.0`.
 
+Inspect or update the synced version with:
+
 ```bash
-git tag -a v0.1.0 -m "Local AI v0.1.0"
-git push origin main
+just version
+just version-check
+just set-version 0.1.1
+```
+
+Create the local release tag with the safer helper flow:
+
+```bash
+just tag-check 0.1.0
+just tag-release 0.1.0
+git show v0.1.0
+git push origin HEAD
 git push origin v0.1.0
 ```
+
+`just tag-check <version>` fails if versions are out of sync, the working tree is dirty, `HEAD` is detached, or the tag already exists locally or on `origin`.
+
+`just tag-release <version>` creates the local annotated tag only. It does not push anything.
 
 If a tag already exists, inspect it before changing anything:
 
