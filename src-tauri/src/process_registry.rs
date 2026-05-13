@@ -55,11 +55,20 @@ impl ProcessRegistry {
         );
     }
 
-    pub fn with_child_mut<T>(&mut self, id: &str, f: impl FnOnce(&mut Child, &mut ProcessRecord) -> T) -> Option<T> {
+    pub fn with_child_mut<T>(
+        &mut self,
+        id: &str,
+        f: impl FnOnce(&mut Child, &mut ProcessRecord) -> T,
+    ) -> Option<T> {
         let record = self.records.get_mut(id)?;
         let mut child = record.child.take()?;
         let result = f(&mut child, record);
-        if record.child.is_none() && matches!(record.status, ProcessStatus::Running | ProcessStatus::Starting | ProcessStatus::Stopping) {
+        if record.child.is_none()
+            && matches!(
+                record.status,
+                ProcessStatus::Running | ProcessStatus::Starting | ProcessStatus::Stopping
+            )
+        {
             record.pid = Some(child.id());
             record.child = Some(child);
         }

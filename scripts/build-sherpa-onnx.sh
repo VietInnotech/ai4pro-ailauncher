@@ -41,7 +41,7 @@ printf 'sherpa-onnx-vit packaged runtime scaffold\n'
 printf 'Repo root: %s\n' "$repo_root"
 printf 'Source dir: %s\n' "${source_dir:-<gh repo clone path for VietInnotech/sherpa-onnx-vit>}"
 printf 'Runtime dir: %s\n' "$runtime_dir"
-printf 'Pinned upstream commit: %s\n' '6a7fe63ded85cd089bff73c12c54e1bda3bd7cf3'
+printf 'Pinned upstream commit: %s\n' '2ce802dc045dbb306d38085423de5327d45f1d26'
 
 if ((repair_macos_runtime)); then
   if [[ "$(uname -s)" != "Darwin" ]]; then
@@ -139,5 +139,5 @@ fi
 
 printf 'No build is performed here.\n'
 printf 'Package a Python runtime that can launch `python -m sherpa_onnx_vit` and place it under src-tauri/bundle/runtime/sherpa-onnx-vit/.\n'
-printf 'The runtime must include FastAPI, uvicorn, and the sherpa_onnx_vit package from VietInnotech/sherpa-onnx-vit at commit 6a7fe63ded85cd089bff73c12c54e1bda3bd7cf3.\n'
+printf 'The runtime must include FastAPI, uvicorn, and the sherpa_onnx_vit package from VietInnotech/sherpa-onnx-vit at commit 2ce802dc045dbb306d38085423de5327d45f1d26.\n'
 printf 'On macOS, run this script with --repair-macos-runtime after creating the venv so the runtime vendors Python.framework and does not depend on Homebrew.\n'

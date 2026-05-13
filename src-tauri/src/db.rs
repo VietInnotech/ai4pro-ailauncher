@@ -4,6 +4,10 @@ use crate::models::{
     AppSettingsRecord, BinaryMode, EngineKind, EngineProfileRecord, EngineRuntimeStateRecord,
     EngineStatus, ModelPackageRecord,
 };
+use crate::sherpa_registry::{
+    default_runtime_json as default_sherpa_runtime_json, DEFAULT_EN_MODEL_RELATIVE_PATH,
+    DEFAULT_VI_MODEL_RELATIVE_PATH, SHERPA_UPSTREAM_COMMIT,
+};
 use rusqlite::{params, Connection};
 use std::path::PathBuf;
 
@@ -55,13 +59,9 @@ impl Database {
         let conn = self.open()?;
         let settings = AppSettingsRecord {
             app_data_root: get_setting(&conn, "app_data_root")?.unwrap_or_default(),
-            developer_mode_persisted: get_setting(&conn, "developer_mode_persisted")?
-                .as_deref()
+            developer_mode_persisted: get_setting(&conn, "developer_mode_persisted")?.as_deref()
                 == Some("true"),
-            stop_engines_on_exit: get_setting(&conn, "stop_engines_on_exit")?
-                .as_deref()
-                .map(|value| value == "true")
-                .unwrap_or(true),
+            stop_engines_on_exit: true,
             auto_start_local_ai: get_setting(&conn, "auto_start_local_ai")?
                 .as_deref()
                 .map(|value| value == "true")
@@ -74,7 +74,8 @@ impl Database {
                 .as_deref()
                 .map(|value| value == "true")
                 .unwrap_or(false),
-            setup_version: get_setting(&conn, "setup_version")?.unwrap_or_else(|| "0.1.0".to_string()),
+            setup_version: get_setting(&conn, "setup_version")?
+                .unwrap_or_else(|| "0.1.0".to_string()),
         };
         Ok(settings)
     }
@@ -82,11 +83,27 @@ impl Database {
     pub fn save_settings(&self, settings: &AppSettingsRecord) -> AppResult<()> {
         let conn = self.open()?;
         set_setting(&conn, "app_data_root", &settings.app_data_root)?;
-        set_setting(&conn, "developer_mode_persisted", bool_str(settings.developer_mode_persisted))?;
-        set_setting(&conn, "stop_engines_on_exit", bool_str(settings.stop_engines_on_exit))?;
-        set_setting(&conn, "auto_start_local_ai", bool_str(settings.auto_start_local_ai))?;
-        set_setting(&conn, "simple_mode_only", bool_str(settings.simple_mode_only))?;
-        set_setting(&conn, "machine_configured", bool_str(settings.machine_configured))?;
+        set_setting(
+            &conn,
+            "developer_mode_persisted",
+            bool_str(settings.developer_mode_persisted),
+        )?;
+        set_setting(&conn, "stop_engines_on_exit", bool_str(true))?;
+        set_setting(
+            &conn,
+            "auto_start_local_ai",
+            bool_str(settings.auto_start_local_ai),
+        )?;
+        set_setting(
+            &conn,
+            "simple_mode_only",
+            bool_str(settings.simple_mode_only),
+        )?;
+        set_setting(
+            &conn,
+            "machine_configured",
+            bool_str(settings.machine_configured),
+        )?;
         set_setting(&conn, "setup_version", &settings.setup_version)?;
         Ok(())
     }
@@ -111,7 +128,8 @@ impl Database {
                 internal_name: row.get(3)?,
                 relative_path: row.get(4)?,
                 required_files: serde_json::from_str(&row.get::<_, String>(5)?).unwrap_or_default(),
-                manifest_json: serde_json::from_str(&row.get::<_, String>(6)?).unwrap_or_else(|_| serde_json::json!({})),
+                manifest_json: serde_json::from_str(&row.get::<_, String>(6)?)
+                    .unwrap_or_else(|_| serde_json::json!({})),
                 installed: row.get::<_, i64>(7)? != 0,
                 verified: row.get::<_, i64>(8)? != 0,
                 last_verified_at: row.get(9)?,
@@ -202,7 +220,8 @@ impl Database {
                 host: row.get(11)?,
                 port: row.get::<_, u16>(12)?,
                 health_url: row.get(13)?,
-                runtime: serde_json::from_str(&runtime_json).unwrap_or_else(|_| serde_json::json!({})),
+                runtime: serde_json::from_str(&runtime_json)
+                    .unwrap_or_else(|_| serde_json::json!({})),
                 extra_args: serde_json::from_str(&extra_args_json).unwrap_or_default(),
                 auto_start: row.get::<_, i64>(16)? != 0,
                 status: parse_status(&status),
@@ -218,7 +237,10 @@ impl Database {
     }
 
     pub fn load_engine_profile(&self, id: &str) -> AppResult<Option<EngineProfileRecord>> {
-        Ok(self.list_engine_profiles()?.into_iter().find(|profile| profile.id == id))
+        Ok(self
+            .list_engine_profiles()?
+            .into_iter()
+            .find(|profile| profile.id == id))
     }
 
     pub fn upsert_engine_profile(&self, profile: &EngineProfileRecord) -> AppResult<()> {
@@ -315,7 +337,10 @@ impl Database {
     }
 
     pub fn load_runtime_state(&self, id: &str) -> AppResult<Option<EngineRuntimeStateRecord>> {
-        Ok(self.list_runtime_state()?.into_iter().find(|state| state.engine_id == id))
+        Ok(self
+            .list_runtime_state()?
+            .into_iter()
+            .find(|state| state.engine_id == id))
     }
 
     pub fn upsert_runtime_state(&self, state: &EngineRuntimeStateRecord) -> AppResult<()> {
@@ -357,7 +382,11 @@ impl Database {
 
 fn get_setting(conn: &Connection, key: &str) -> AppResult<Option<String>> {
     Ok(conn
-        .query_row("SELECT value FROM app_settings WHERE key = ?", [key], |row| row.get::<_, String>(0))
+        .query_row(
+            "SELECT value FROM app_settings WHERE key = ?",
+            [key],
+            |row| row.get::<_, String>(0),
+        )
         .ok())
 }
 
@@ -370,7 +399,11 @@ fn set_setting(conn: &Connection, key: &str, value: &str) -> AppResult<()> {
 }
 
 fn bool_str(value: bool) -> &'static str {
-    if value { "true" } else { "false" }
+    if value {
+        "true"
+    } else {
+        "false"
+    }
 }
 
 fn default_model_packages() -> Vec<ModelPackageRecord> {
@@ -401,9 +434,9 @@ fn default_model_packages() -> Vec<ModelPackageRecord> {
         ModelPackageRecord {
             id: "default_speech".to_string(),
             kind: EngineKind::SherpaOnnx,
-            display_name: "Speech Model".to_string(),
-            internal_name: "default_sherpa_model".to_string(),
-            relative_path: "models/sherpa/default".to_string(),
+            display_name: "Vietnamese Speech Model".to_string(),
+            internal_name: "default_sherpa_vi_model".to_string(),
+            relative_path: DEFAULT_VI_MODEL_RELATIVE_PATH.to_string(),
             required_files: vec![
                 "encoder*.onnx".to_string(),
                 "decoder*.onnx".to_string(),
@@ -413,15 +446,50 @@ fn default_model_packages() -> Vec<ModelPackageRecord> {
             manifest_json: serde_json::json!({
                 "id": "default_speech",
                 "kind": "sherpa_onnx",
-                "displayName": "Speech Model",
-                "internalName": "default_sherpa_model",
-                "relativePath": "models/sherpa/default",
+                "displayName": "Vietnamese Speech Model",
+                "internalName": "default_sherpa_vi_model",
+                "relativePath": DEFAULT_VI_MODEL_RELATIVE_PATH,
                 "requiredFiles": ["encoder*.onnx", "decoder*.onnx", "joiner*.onnx", "tokens.txt|config.json"],
                 "required": true,
                 "sha256": null,
                 "upstreamRepo": "https://github.com/VietInnotech/sherpa-onnx-vit",
-                "upstreamCommit": "6a7fe63ded85cd089bff73c12c54e1bda3bd7cf3",
-                "modelFamily": "offline_int8"
+                "upstreamCommit": SHERPA_UPSTREAM_COMMIT,
+                "modelFamily": "offline_int8",
+                "language": "vi",
+                "postprocessMode": "capu"
+            }),
+            installed: false,
+            verified: false,
+            last_verified_at: None,
+            created_at: ts.clone(),
+            updated_at: ts.clone(),
+        },
+        ModelPackageRecord {
+            id: "default_speech_en".to_string(),
+            kind: EngineKind::SherpaOnnx,
+            display_name: "English Speech Model".to_string(),
+            internal_name: "default_sherpa_en_model".to_string(),
+            relative_path: DEFAULT_EN_MODEL_RELATIVE_PATH.to_string(),
+            required_files: vec![
+                "encoder*.onnx".to_string(),
+                "decoder*.onnx".to_string(),
+                "joiner*.onnx".to_string(),
+                "tokens.txt|config.json".to_string(),
+            ],
+            manifest_json: serde_json::json!({
+                "id": "default_speech_en",
+                "kind": "sherpa_onnx",
+                "displayName": "English Speech Model",
+                "internalName": "default_sherpa_en_model",
+                "relativePath": DEFAULT_EN_MODEL_RELATIVE_PATH,
+                "requiredFiles": ["encoder*.onnx", "decoder*.onnx", "joiner*.onnx", "tokens.txt|config.json"],
+                "required": true,
+                "sha256": null,
+                "upstreamRepo": "https://github.com/VietInnotech/sherpa-onnx-vit",
+                "upstreamCommit": SHERPA_UPSTREAM_COMMIT,
+                "modelFamily": "offline_int8",
+                "language": "en",
+                "postprocessMode": "none"
             }),
             installed: false,
             verified: false,
@@ -477,42 +545,12 @@ fn default_engine_profiles() -> Vec<EngineProfileRecord> {
             binary_path: None,
             model_package_id: Some("default_speech".to_string()),
             model_path: None,
-            model_dir: Some("models/sherpa/default".to_string()),
+            model_dir: Some(DEFAULT_VI_MODEL_RELATIVE_PATH.to_string()),
             tokens_path: None,
             host: "127.0.0.1".to_string(),
             port: 6006,
             health_url: Some("http://127.0.0.1:6006/health".to_string()),
-            runtime: serde_json::json!({
-                "upstreamRepo": "https://github.com/VietInnotech/sherpa-onnx-vit",
-                "upstreamCommit": "6a7fe63ded85cd089bff73c12c54e1bda3bd7cf3",
-                "entrypoint": "python_module",
-                "moduleName": "sherpa_onnx_vit",
-                "packagedRuntimeDir": "runtime/sherpa-onnx-vit",
-                "serverType": "http",
-                "provider": "cpu",
-                "postprocessMode": "clean",
-                "sttModelFamily": "offline_int8",
-                "numThreads": 2,
-                "argsTemplate": [
-                    "-m",
-                    "sherpa_onnx_vit",
-                    "--host",
-                    "{host}",
-                    "--port",
-                    "{port}",
-                    "--provider",
-                    "{provider}",
-                    "--stt-model-family",
-                    "{sttModelFamily}",
-                    "--model-dir",
-                    "{modelDir}",
-                    "--postprocess-mode",
-                    "{postprocessMode}",
-                    "--alias",
-                    "{alias}"
-                ],
-                "alias": "default-speech"
-            }),
+            runtime: default_sherpa_runtime_json(),
             extra_args: vec![],
             auto_start: false,
             status: EngineStatus::Stopped,

@@ -36,7 +36,9 @@ Copied runtime output:
 Model files remain external and operator-managed:
 
 - one Llama GGUF file, by convention `<app-root>/models/llama/default/model.gguf`
-- one Sherpa model directory, by convention `<app-root>/models/sherpa/default/`
+- one Vietnamese Sherpa model directory, by convention `<app-root>/models/stt/gipformer-65M-rnnt/`
+- one English Sherpa model directory, by convention `<app-root>/models/stt/sherpa-onnx-zipformer-en-libriheavy-20230830-medium-punct-case/`
+- one Sherpa registry file at `<app-root>/config/sherpa/models.local.json`
 
 Developer Mode may point to absolute model paths during machine setup. `tokensPath` should normally remain empty because Sherpa resolves `tokens.txt` from the configured model directory.
 
@@ -44,11 +46,11 @@ Upstream contract pinned from:
 
 - repo: `https://github.com/VietInnotech/sherpa-onnx-vit`
 - branch: `main`
-- commit: `6a7fe63ded85cd089bff73c12c54e1bda3bd7cf3`
+- commit: `2ce802dc045dbb306d38085423de5327d45f1d26`
 
 Preferred launch shape in this repo:
 
-- `python -m sherpa_onnx_vit`
+- `python -m sherpa_onnx_vit --models-config <app-root>/config/sherpa/models.local.json`
 
 The macOS runtime must be relocatable. Do not ship a venv whose `python3` or
 `bin/python*` resolves into `/opt/homebrew`, `/usr/local`, or a developer home

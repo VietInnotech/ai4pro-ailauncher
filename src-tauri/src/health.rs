@@ -4,10 +4,20 @@ use std::net::{TcpStream, ToSocketAddrs};
 use std::time::{Duration, Instant};
 
 pub fn check_local_health(host: &str, port: u16, timeout_ms: u64) -> AppResult<bool> {
-    wait_for_http_any(host, port, &["/health", "/v1/models", "/props", "/"], timeout_ms)
+    wait_for_http_any(
+        host,
+        port,
+        &["/health", "/v1/models", "/props", "/"],
+        timeout_ms,
+    )
 }
 
-pub fn wait_for_http_any(host: &str, port: u16, paths: &[&str], timeout_ms: u64) -> AppResult<bool> {
+pub fn wait_for_http_any(
+    host: &str,
+    port: u16,
+    paths: &[&str],
+    timeout_ms: u64,
+) -> AppResult<bool> {
     let deadline = Instant::now() + Duration::from_millis(timeout_ms);
     while Instant::now() < deadline {
         for path in paths {
@@ -23,7 +33,13 @@ pub fn wait_for_http_any(host: &str, port: u16, paths: &[&str], timeout_ms: u64)
 pub fn http_get_ok(host: &str, port: u16, path: &str, timeout_ms: u64) -> AppResult<bool> {
     let mut addrs = format!("{host}:{port}")
         .to_socket_addrs()
-        .map_err(|error| AppError::with_details("HEALTH_CHECK_FAILED", error.to_string(), serde_json::json!({"host": host, "port": port})))?;
+        .map_err(|error| {
+            AppError::with_details(
+                "HEALTH_CHECK_FAILED",
+                error.to_string(),
+                serde_json::json!({"host": host, "port": port}),
+            )
+        })?;
     let Some(addr) = addrs.next() else {
         return Ok(false);
     };

@@ -32,7 +32,10 @@ impl AppError {
     }
 
     pub fn developer_mode_required() -> Self {
-        Self::new("DEVELOPER_MODE_REQUIRED", "Chế độ nhà phát triển chưa được bật.")
+        Self::new(
+            "DEVELOPER_MODE_REQUIRED",
+            "Chế độ nhà phát triển chưa được bật.",
+        )
     }
 
     pub fn safe_generic() -> Self {

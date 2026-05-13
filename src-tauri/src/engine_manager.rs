@@ -11,6 +11,9 @@ use crate::models::{
 };
 use crate::ports;
 use crate::process_supervisor::ProcessSupervisor;
+use crate::sherpa_registry::{
+    models_config_path_value, resolved_models_config_path, sync_managed_models_config,
+};
 use crate::validation::{validate_profile, validate_update_input};
 use std::path::{Path, PathBuf};
 
@@ -23,11 +26,16 @@ pub struct EngineManager {
 
 impl EngineManager {
     pub fn new(db: Database, paths: AppPaths, supervisor: ProcessSupervisor) -> Self {
-        Self { db, paths, supervisor }
+        Self {
+            db,
+            paths,
+            supervisor,
+        }
     }
 
     pub fn bootstrap_defaults(&self) -> AppResult<()> {
         self.reconcile_runtime_state()?;
+        self.ensure_managed_sherpa_registry_files()?;
         Ok(())
     }
 
@@ -109,7 +117,9 @@ impl EngineManager {
 
         profile.updated_at = crate::models::now_timestamp();
         self.db.upsert_engine_profile(&profile)?;
-        self.db.upsert_runtime_state(&self.runtime_state_for_profile(&profile))?;
+        self.db
+            .upsert_runtime_state(&self.runtime_state_for_profile(&profile))?;
+        self.sync_managed_sherpa_registry_for_profile(&profile)?;
         self.to_developer_dto(profile)
     }
 
@@ -126,6 +136,7 @@ impl EngineManager {
             .db
             .load_engine_profile(id)?
             .ok_or_else(|| AppError::new("ENGINE_NOT_FOUND", "Không tìm thấy hồ sơ động cơ."))?;
+        self.sync_managed_sherpa_registry_for_profile(&profile)?;
         let mut validation = validate_profile(&profile, &self.paths.app_root)?;
         if self.profile_health_ok(&profile, 300)? {
             for issue in &mut validation.issues {
@@ -138,7 +149,10 @@ impl EngineManager {
                 code: "SERVICE_HEALTHY".to_string(),
                 message: "Dịch vụ đang phản hồi trên cổng đã cấu hình.".to_string(),
             });
-            validation.valid = validation.issues.iter().all(|issue| issue.severity != "error");
+            validation.valid = validation
+                .issues
+                .iter()
+                .all(|issue| issue.severity != "error");
         }
         if !ports::port_is_available(profile.port) && profile.status == EngineStatus::Stopped {
             if self.profile_health_ok(&profile, 300)? {
@@ -166,7 +180,9 @@ impl EngineManager {
             .list_model_packages()?
             .into_iter()
             .find(|package| package.id == id)
-            .ok_or_else(|| AppError::new("MODEL_PACKAGE_NOT_FOUND", "Không tìm thấy gói mô hình."))?;
+            .ok_or_else(|| {
+                AppError::new("MODEL_PACKAGE_NOT_FOUND", "Không tìm thấy gói mô hình.")
+            })?;
 
         let resolved = self.resolve_model_package_path(&package);
         let mut issues = Vec::new();
@@ -176,7 +192,10 @@ impl EngineManager {
             issues.push(ValidationIssueDto {
                 severity: "error".to_string(),
                 code: "MISSING_MODEL".to_string(),
-                message: format!("Required model path is unavailable: {}", resolved.to_string_lossy()),
+                message: format!(
+                    "Required model path is unavailable: {}",
+                    resolved.to_string_lossy()
+                ),
             });
         }
 
@@ -188,7 +207,9 @@ impl EngineManager {
                     }
                 }
                 "tokens.txt|config.json" => {
-                    if !resolved.join("tokens.txt").exists() && !resolved.join("config.json").exists() {
+                    if !resolved.join("tokens.txt").exists()
+                        && !resolved.join("config.json").exists()
+                    {
                         issues.push(missing_model_issue(required));
                     }
                 }
@@ -200,9 +221,12 @@ impl EngineManager {
                         .into_iter()
                         .flat_map(|entries| entries.filter_map(Result::ok))
                         .any(|entry| {
-                            entry.path().file_name().and_then(|name| name.to_str()).map(|name| {
-                                name.starts_with(prefix) && name.ends_with(".onnx")
-                            }).unwrap_or(false)
+                            entry
+                                .path()
+                                .file_name()
+                                .and_then(|name| name.to_str())
+                                .map(|name| name.starts_with(prefix) && name.ends_with(".onnx"))
+                                .unwrap_or(false)
                         });
                     if !found {
                         issues.push(missing_model_issue(required));
@@ -293,7 +317,10 @@ impl EngineManager {
 
         let validation = self.validate_engine_profile(&profile.id)?;
         if !validation.valid {
-            return Err(AppError::new("INVALID_CONFIG", "Hồ sơ động cơ không vượt qua kiểm tra."));
+            return Err(AppError::new(
+                "INVALID_CONFIG",
+                "Hồ sơ động cơ không vượt qua kiểm tra.",
+            ));
         }
         if !ports::port_is_available(profile.port) {
             return Err(AppError::new("PORT_IN_USE", "Cổng đã được sử dụng."));
@@ -320,7 +347,11 @@ impl EngineManager {
         let snapshot = self.supervisor.spawn(spec)?;
 
         let healthy = self.wait_for_profile_health(&profile)?;
-        updated.status = if healthy { EngineStatus::Running } else { EngineStatus::Unhealthy };
+        updated.status = if healthy {
+            EngineStatus::Running
+        } else {
+            EngineStatus::Unhealthy
+        };
         updated.pid = snapshot.pid;
         updated.last_error = if healthy {
             None
@@ -375,17 +406,18 @@ impl EngineManager {
 
         let profiles = self.db.list_engine_profiles()?;
         let enabled_profiles: Vec<_> = profiles.iter().filter(|profile| profile.enabled).collect();
-        let model_summaries = simple_model_summaries_from_records(
-            self.db.list_model_packages()?,
-            &enabled_profiles,
-        );
+        let model_summaries =
+            simple_model_summaries_from_records(self.db.list_model_packages()?, &enabled_profiles);
 
         let enabled_statuses: Vec<_> = enabled_profiles
             .iter()
             .map(|profile| profile.status.clone())
             .collect();
 
-        Ok(simple_status_from_engine_statuses(&enabled_statuses, model_summaries))
+        Ok(simple_status_from_engine_statuses(
+            &enabled_statuses,
+            model_summaries,
+        ))
     }
 
     pub fn process_snapshots(&self) -> Vec<ProcessSnapshotDto> {
@@ -394,8 +426,16 @@ impl EngineManager {
 
     pub fn recent_log_paths(&self) -> Vec<String> {
         vec![
-            self.paths.logs_dir.join("launcher.log").to_string_lossy().to_string(),
-            self.paths.logs_dir.join("engines").to_string_lossy().to_string(),
+            self.paths
+                .logs_dir
+                .join("launcher.log")
+                .to_string_lossy()
+                .to_string(),
+            self.paths
+                .logs_dir
+                .join("engines")
+                .to_string_lossy()
+                .to_string(),
         ]
     }
 
@@ -411,9 +451,31 @@ impl EngineManager {
             .unwrap_or_else(|_| resolve_binary_path(&self.paths, profile, adapter.as_ref()))
     }
 
-    fn to_developer_dto(&self, profile: EngineProfileRecord) -> AppResult<DeveloperEngineProfileDto> {
+    fn to_developer_dto(
+        &self,
+        profile: EngineProfileRecord,
+    ) -> AppResult<DeveloperEngineProfileDto> {
         let generated_args = self.generated_args(&profile);
-        let resolved_binary_path = Some(self.resolve_profile_binary(&profile).to_string_lossy().to_string());
+        let resolved_binary_path = Some(
+            self.resolve_profile_binary(&profile)
+                .to_string_lossy()
+                .to_string(),
+        );
+        let is_sherpa = matches!(&profile.kind, EngineKind::SherpaOnnx);
+        let models_config_path = if is_sherpa {
+            Some(models_config_path_value(&profile))
+        } else {
+            None
+        };
+        let resolved_models_config_path = if is_sherpa {
+            Some(
+                resolved_models_config_path(&self.paths.app_root, &profile)
+                    .to_string_lossy()
+                    .to_string(),
+            )
+        } else {
+            None
+        };
 
         Ok(DeveloperEngineProfileDto {
             id: profile.id,
@@ -427,19 +489,24 @@ impl EngineManager {
             model_package_id: profile.model_package_id,
             model_path: profile.model_path.clone(),
             model_dir: profile.model_dir.clone(),
+            models_config_path,
             tokens_path: profile.tokens_path.clone(),
-            resolved_model_path: profile
-                .model_path
-                .as_ref()
-                .map(|path| self.resolve_relative_or_absolute(path).to_string_lossy().to_string()),
-            resolved_model_dir: profile
-                .model_dir
-                .as_ref()
-                .map(|path| self.resolve_relative_or_absolute(path).to_string_lossy().to_string()),
-            resolved_tokens_path: profile
-                .tokens_path
-                .as_ref()
-                .map(|path| self.resolve_relative_or_absolute(path).to_string_lossy().to_string()),
+            resolved_model_path: profile.model_path.as_ref().map(|path| {
+                self.resolve_relative_or_absolute(path)
+                    .to_string_lossy()
+                    .to_string()
+            }),
+            resolved_model_dir: profile.model_dir.as_ref().map(|path| {
+                self.resolve_relative_or_absolute(path)
+                    .to_string_lossy()
+                    .to_string()
+            }),
+            resolved_models_config_path,
+            resolved_tokens_path: profile.tokens_path.as_ref().map(|path| {
+                self.resolve_relative_or_absolute(path)
+                    .to_string_lossy()
+                    .to_string()
+            }),
             host: profile.host,
             port: profile.port,
             health_url: profile.health_url,
@@ -454,8 +521,14 @@ impl EngineManager {
         })
     }
 
-    fn to_model_package_dto(&self, package: ModelPackageRecord) -> AppResult<DeveloperModelPackageDto> {
-        let resolved_path = self.resolve_model_package_path(&package).to_string_lossy().to_string();
+    fn to_model_package_dto(
+        &self,
+        package: ModelPackageRecord,
+    ) -> AppResult<DeveloperModelPackageDto> {
+        let resolved_path = self
+            .resolve_model_package_path(&package)
+            .to_string_lossy()
+            .to_string();
 
         Ok(DeveloperModelPackageDto {
             id: package.id,
@@ -480,7 +553,11 @@ impl EngineManager {
                     profile
                         .model_path
                         .as_ref()
-                        .map(|path| self.resolve_relative_or_absolute(path).to_string_lossy().to_string())
+                        .map(|path| {
+                            self.resolve_relative_or_absolute(path)
+                                .to_string_lossy()
+                                .to_string()
+                        })
                         .unwrap_or_default(),
                     "--host".to_string(),
                     profile.host.clone(),
@@ -488,22 +565,47 @@ impl EngineManager {
                     profile.port.to_string(),
                 ];
 
-                if let Some(ctx_size) = profile.runtime.get("ctxSize").and_then(|value| value.as_i64()) {
+                if let Some(ctx_size) = profile
+                    .runtime
+                    .get("ctxSize")
+                    .and_then(|value| value.as_i64())
+                {
                     args.extend(["-c".to_string(), ctx_size.to_string()]);
                 }
-                if let Some(gpu_layers) = profile.runtime.get("gpuLayers").and_then(|value| value.as_i64()) {
+                if let Some(gpu_layers) = profile
+                    .runtime
+                    .get("gpuLayers")
+                    .and_then(|value| value.as_i64())
+                {
                     args.extend(["-ngl".to_string(), gpu_layers.to_string()]);
                 }
-                if let Some(threads) = profile.runtime.get("threads").and_then(|value| value.as_i64()) {
+                if let Some(threads) = profile
+                    .runtime
+                    .get("threads")
+                    .and_then(|value| value.as_i64())
+                {
                     args.extend(["-t".to_string(), threads.to_string()]);
                 }
-                if let Some(parallel) = profile.runtime.get("parallel").and_then(|value| value.as_i64()) {
+                if let Some(parallel) = profile
+                    .runtime
+                    .get("parallel")
+                    .and_then(|value| value.as_i64())
+                {
                     args.extend(["-np".to_string(), parallel.to_string()]);
                 }
-                if profile.runtime.get("metrics").and_then(|value| value.as_bool()).unwrap_or(false) {
+                if profile
+                    .runtime
+                    .get("metrics")
+                    .and_then(|value| value.as_bool())
+                    .unwrap_or(false)
+                {
                     args.push("--metrics".to_string());
                 }
-                if let Some(api_key) = profile.runtime.get("apiKey").and_then(|value| value.as_str()) {
+                if let Some(api_key) = profile
+                    .runtime
+                    .get("apiKey")
+                    .and_then(|value| value.as_str())
+                {
                     if !api_key.is_empty() {
                         args.extend(["--api-key".to_string(), api_key.to_string()]);
                     }
@@ -517,7 +619,11 @@ impl EngineManager {
                     .model_dir
                     .as_ref()
                     .or(profile.model_path.as_ref())
-                    .map(|path| self.resolve_relative_or_absolute(path).to_string_lossy().to_string())
+                    .map(|path| {
+                        self.resolve_relative_or_absolute(path)
+                            .to_string_lossy()
+                            .to_string()
+                    })
                     .unwrap_or_default();
                 let alias = profile
                     .runtime
@@ -525,9 +631,30 @@ impl EngineManager {
                     .and_then(|value| value.as_str())
                     .unwrap_or(&profile.id)
                     .to_string();
-                let provider = profile.runtime.get("provider").and_then(|value| value.as_str()).unwrap_or("cpu");
-                let family = profile.runtime.get("sttModelFamily").and_then(|value| value.as_str()).unwrap_or("offline_int8");
-                let postprocess = profile.runtime.get("postprocessMode").and_then(|value| value.as_str()).unwrap_or("clean");
+                let provider = profile
+                    .runtime
+                    .get("provider")
+                    .and_then(|value| value.as_str())
+                    .unwrap_or("cpu");
+                let family = profile
+                    .runtime
+                    .get("sttModelFamily")
+                    .and_then(|value| value.as_str())
+                    .unwrap_or("offline_int8");
+                let postprocess = profile
+                    .runtime
+                    .get("postprocessMode")
+                    .and_then(|value| value.as_str())
+                    .unwrap_or("clean");
+                let models_config_path = resolved_models_config_path(&self.paths.app_root, profile)
+                    .to_string_lossy()
+                    .to_string();
+                let num_threads = profile
+                    .runtime
+                    .get("numThreads")
+                    .and_then(|value| value.as_i64())
+                    .unwrap_or(2)
+                    .to_string();
                 let template = profile
                     .runtime
                     .get("argsTemplate")
@@ -547,6 +674,8 @@ impl EngineManager {
                             .replace("{modelDir}", &model_dir)
                             .replace("{postprocessMode}", postprocess)
                             .replace("{alias}", &alias)
+                            .replace("{modelsConfigPath}", &models_config_path)
+                            .replace("{numThreads}", &num_threads)
                     })
                     .collect();
 
@@ -564,13 +693,18 @@ impl EngineManager {
         resolve_relative_or_absolute(&self.paths.app_root, value)
     }
 
-    fn record_runtime_failure(&self, profile: &EngineProfileRecord, error: &AppError) -> AppResult<()> {
+    fn record_runtime_failure(
+        &self,
+        profile: &EngineProfileRecord,
+        error: &AppError,
+    ) -> AppResult<()> {
         let mut failed = profile.clone();
         failed.status = match error.code.as_str() {
             "MISSING_BINARY" => EngineStatus::MissingBinary,
-            "MISSING_MODEL" | "INVALID_MODEL_DIR" | "INVALID_MODEL_PATH" | "INVALID_TOKENS_PATH" => {
-                EngineStatus::MissingModel
-            }
+            "MISSING_MODEL"
+            | "INVALID_MODEL_DIR"
+            | "INVALID_MODEL_PATH"
+            | "INVALID_TOKENS_PATH" => EngineStatus::MissingModel,
             "PORT_IN_USE" => EngineStatus::PortConflict,
             _ => EngineStatus::InvalidConfig,
         };
@@ -592,7 +726,12 @@ impl EngineManager {
     }
 
     fn wait_for_profile_health(&self, profile: &EngineProfileRecord) -> AppResult<bool> {
-        health::wait_for_http_any(&profile.host, profile.port, health_paths_for_kind(&profile.kind), startup_health_timeout_ms(&profile.kind))
+        health::wait_for_http_any(
+            &profile.host,
+            profile.port,
+            health_paths_for_kind(&profile.kind),
+            startup_health_timeout_ms(&profile.kind),
+        )
     }
 
     fn profile_health_ok(&self, profile: &EngineProfileRecord, timeout_ms: u64) -> AppResult<bool> {
@@ -619,11 +758,14 @@ impl EngineManager {
                     let healthy = self.wait_for_profile_health(&profile)?;
                     if !healthy {
                         profile.status = EngineStatus::Unhealthy;
-                        profile.last_error = Some("Engine process is alive but HTTP health did not respond.".to_string());
+                        profile.last_error = Some(
+                            "Engine process is alive but HTTP health did not respond.".to_string(),
+                        );
                     }
                 }
                 self.db.upsert_engine_profile(&profile)?;
-                self.db.upsert_runtime_state(&self.runtime_state_for_profile(&profile))?;
+                self.db
+                    .upsert_runtime_state(&self.runtime_state_for_profile(&profile))?;
             }
         }
 
@@ -642,7 +784,8 @@ impl EngineManager {
                 profile.last_exit_code = None;
                 profile.updated_at = crate::models::now_timestamp();
                 self.db.upsert_engine_profile(&profile)?;
-                self.db.upsert_runtime_state(&self.runtime_state_for_profile(&profile))?;
+                self.db
+                    .upsert_runtime_state(&self.runtime_state_for_profile(&profile))?;
             }
         }
         Ok(())
@@ -655,7 +798,8 @@ impl EngineManager {
         adopted.last_exit_code = None;
         adopted.updated_at = crate::models::now_timestamp();
         self.db.upsert_engine_profile(&adopted)?;
-        self.db.upsert_runtime_state(&self.runtime_state_for_profile(&adopted))
+        self.db
+            .upsert_runtime_state(&self.runtime_state_for_profile(&adopted))
     }
 
     fn reconcile_runtime_state(&self) -> AppResult<()> {
@@ -669,13 +813,20 @@ impl EngineManager {
         }
 
         for mut profile in self.db.list_engine_profiles()? {
-            if !matches!(profile.status, EngineStatus::MissingBinary | EngineStatus::MissingModel | EngineStatus::InvalidConfig | EngineStatus::PortConflict) {
+            if !matches!(
+                profile.status,
+                EngineStatus::MissingBinary
+                    | EngineStatus::MissingModel
+                    | EngineStatus::InvalidConfig
+                    | EngineStatus::PortConflict
+            ) {
                 profile.status = EngineStatus::Stopped;
             }
             profile.pid = None;
             profile.updated_at = crate::models::now_timestamp();
             self.db.upsert_engine_profile(&profile)?;
-            self.db.upsert_runtime_state(&self.runtime_state_for_profile(&profile))?;
+            self.db
+                .upsert_runtime_state(&self.runtime_state_for_profile(&profile))?;
         }
 
         Ok(())
@@ -687,12 +838,24 @@ impl EngineManager {
             status: profile.status.clone(),
             pid: profile.pid,
             health_url: profile.health_url.clone(),
-            started_at: if matches!(profile.status, EngineStatus::Running | EngineStatus::Starting) {
+            started_at: if matches!(
+                profile.status,
+                EngineStatus::Running | EngineStatus::Starting
+            ) {
                 Some(crate::models::now_timestamp())
             } else {
                 None
             },
-            stopped_at: if matches!(profile.status, EngineStatus::Stopped | EngineStatus::Unhealthy | EngineStatus::Crashed | EngineStatus::MissingBinary | EngineStatus::MissingModel | EngineStatus::InvalidConfig | EngineStatus::PortConflict) {
+            stopped_at: if matches!(
+                profile.status,
+                EngineStatus::Stopped
+                    | EngineStatus::Unhealthy
+                    | EngineStatus::Crashed
+                    | EngineStatus::MissingBinary
+                    | EngineStatus::MissingModel
+                    | EngineStatus::InvalidConfig
+                    | EngineStatus::PortConflict
+            ) {
                 Some(crate::models::now_timestamp())
             } else {
                 None
@@ -700,6 +863,28 @@ impl EngineManager {
             last_error: profile.last_error.clone(),
             last_exit_code: profile.last_exit_code,
             updated_at: crate::models::now_timestamp(),
+        }
+    }
+
+    fn ensure_managed_sherpa_registry_files(&self) -> AppResult<()> {
+        for profile in self.db.list_engine_profiles()? {
+            self.sync_managed_sherpa_registry_for_profile(&profile)?;
+        }
+        Ok(())
+    }
+
+    fn sync_managed_sherpa_registry_for_profile(
+        &self,
+        profile: &EngineProfileRecord,
+    ) -> AppResult<()> {
+        if profile.kind != EngineKind::SherpaOnnx {
+            return Ok(());
+        }
+
+        match sync_managed_models_config(&self.paths, profile) {
+            Ok(_) => Ok(()),
+            Err(error) if error.code == "INVALID_MODEL_DIR" => Ok(()),
+            Err(error) => Err(error),
         }
     }
 }
@@ -764,7 +949,10 @@ fn simple_model_summary_from_record(
 
     let status = if package.verified {
         SimpleModelStatus::Ready
-    } else if linked_statuses.iter().any(|status| **status == EngineStatus::Running) {
+    } else if linked_statuses
+        .iter()
+        .any(|status| **status == EngineStatus::Running)
+    {
         SimpleModelStatus::Ready
     } else if linked_statuses.iter().any(|status| {
         matches!(

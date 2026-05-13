@@ -21,7 +21,9 @@ Model files remain operator-managed under the app data root:
 
 ```text
 <app-root>/models/llama/default/model.gguf
-<app-root>/models/sherpa/default/
+<app-root>/models/stt/gipformer-65M-rnnt/
+<app-root>/models/stt/sherpa-onnx-zipformer-en-libriheavy-20230830-medium-punct-case/
+<app-root>/config/sherpa/models.local.json
 ```
 
 `scripts/validate-bundle-artifacts.mjs` fails release builds when required runtime artifacts are missing or model-like files are placed under this directory.

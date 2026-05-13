@@ -8,7 +8,6 @@
     loading: boolean;
     error?: string;
   } = { loading: false };
-  let stopOnExit = true;
   let autoStart = false;
 
   const unsubscribe = appSettingsStore.subscribe((value: typeof state) => {
@@ -24,13 +23,11 @@
   });
 
   $: if (state.value) {
-    stopOnExit = state.value.stopEnginesOnExit;
     autoStart = state.value.autoStartLocalAi;
   }
 
   async function save() {
     await appSettingsStore.save({
-      stopEnginesOnExit: stopOnExit,
       autoStartLocalAi: autoStart
     });
   }
@@ -43,14 +40,6 @@
   </div>
 
   <div class="space-y-4">
-    <label class="flex items-center justify-between gap-4 rounded-md border px-4 py-3" style="border-color: #d5dce3;">
-      <span>
-        <span class="block font-medium text-[#1b2430]">Dừng các động cơ khi ứng dụng thoát</span>
-        <span class="block text-sm text-[#5e6a79]">Mặc định tránh để lại các dịch vụ cục bộ chạy mồ côi.</span>
-      </span>
-      <input bind:checked={stopOnExit} type="checkbox" />
-    </label>
-
     <label class="flex items-center justify-between gap-4 rounded-md border px-4 py-3" style="border-color: #d5dce3;">
       <span>
         <span class="block font-medium text-[#1b2430]">Khởi động Local AI khi mở ứng dụng</span>

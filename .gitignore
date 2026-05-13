@@ -4,12 +4,17 @@ src-tauri/target/
 data/
 *.log
 
-# Local test assets (large files)
-local-assets/
+# Local machine config (engine-specific configs)
+config/
+
+# Models, test assets, and large binary files
+models/
 *.mp3
 *.wav
 *.gguf
-government-meeting.mp3
+
+# Build artifacts (release-builder output)
+src-tauri/bundle/
 
 # macOS
 .DS_Store

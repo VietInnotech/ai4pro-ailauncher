@@ -39,12 +39,15 @@ pub fn build_bundle(context: &AppContext) -> AppResult<DiagnosticsBundleDto> {
             .list_engine_profiles()?
             .into_iter()
             .filter_map(|profile| {
-                profile.last_error.as_ref().map(|last_error| crate::models::DiagnosticsCrashDto {
-                    engine_id: profile.id.clone(),
-                    last_error: Some(last_error.clone()),
-                    last_exit_code: profile.last_exit_code,
-                    updated_at: profile.updated_at.clone(),
-                })
+                profile
+                    .last_error
+                    .as_ref()
+                    .map(|last_error| crate::models::DiagnosticsCrashDto {
+                        engine_id: profile.id.clone(),
+                        last_error: Some(last_error.clone()),
+                        last_exit_code: profile.last_exit_code,
+                        updated_at: profile.updated_at.clone(),
+                    })
             })
             .collect(),
         runtime_state,
@@ -57,17 +60,33 @@ fn collect_recent_logs(log_root: &std::path::Path) -> AppResult<Vec<DiagnosticsL
 
     for path in [
         log_root.join("launcher.log"),
-        log_root.join("engines").join("language_engine").join("stdout.log"),
-        log_root.join("engines").join("language_engine").join("stderr.log"),
-        log_root.join("engines").join("speech_engine").join("stdout.log"),
-        log_root.join("engines").join("speech_engine").join("stderr.log"),
+        log_root
+            .join("engines")
+            .join("language_engine")
+            .join("stdout.log"),
+        log_root
+            .join("engines")
+            .join("language_engine")
+            .join("stderr.log"),
+        log_root
+            .join("engines")
+            .join("speech_engine")
+            .join("stdout.log"),
+        log_root
+            .join("engines")
+            .join("speech_engine")
+            .join("stderr.log"),
     ] {
         let content = crate::logs::tail_file(&path, 80)?;
         if content.is_empty() {
             continue;
         }
         snippets.push(DiagnosticsLogSnippetDto {
-            name: path.file_name().and_then(|name| name.to_str()).unwrap_or("log").to_string(),
+            name: path
+                .file_name()
+                .and_then(|name| name.to_str())
+                .unwrap_or("log")
+                .to_string(),
             path: path.to_string_lossy().to_string(),
             content,
         });

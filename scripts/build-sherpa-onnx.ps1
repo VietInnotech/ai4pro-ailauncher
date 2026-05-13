@@ -26,7 +26,7 @@ Write-Output 'sherpa-onnx-vit packaged runtime scaffold'
 Write-Output ("Repo root: {0}" -f $RepoRoot)
 Write-Output ("Source dir: {0}" -f ($(if ($SourceDir) { $SourceDir } else { '<gh repo clone path for VietInnotech/sherpa-onnx-vit>' })))
 Write-Output ("Runtime dir: {0}" -f $RuntimeDir)
-Write-Output 'Pinned upstream commit: 6a7fe63ded85cd089bff73c12c54e1bda3bd7cf3'
+Write-Output 'Pinned upstream commit: 2ce802dc045dbb306d38085423de5327d45f1d26'
 
 if ($CheckOnly) {
   foreach ($name in @('python3', 'python.exe')) {
@@ -38,4 +38,4 @@ if ($CheckOnly) {
 
 Write-Output 'No build is performed here.'
 Write-Output 'Package a Python runtime that can launch `python -m sherpa_onnx_vit` and place it under src-tauri/bundle/runtime/sherpa-onnx-vit/.'
-Write-Output 'The runtime must include FastAPI, uvicorn, and the sherpa_onnx_vit package from VietInnotech/sherpa-onnx-vit at commit 6a7fe63ded85cd089bff73c12c54e1bda3bd7cf3.'
+Write-Output 'The runtime must include FastAPI, uvicorn, and the sherpa_onnx_vit package from VietInnotech/sherpa-onnx-vit at commit 2ce802dc045dbb306d38085423de5327d45f1d26.'

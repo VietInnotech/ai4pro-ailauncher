@@ -198,9 +198,9 @@ Use this workflow before treating a macOS build as deployable with real engines.
 Expected local test assets:
 
 ```text
-local-assets/models/llama/gemma-4-E4B-it-UD-Q5_K_XL.gguf
-local-assets/models/sherpa/gipformer-65M-rnnt
-local-assets/audio/government-meeting-20s.wav
+models/llama/default/model.gguf
+models/stt/gipformer-65M-rnnt
+models/audio/government-meeting-20s.wav
 ```
 
 First test the engines directly on non-default ports:
@@ -209,7 +209,7 @@ First test the engines directly on non-default ports:
 ./src-tauri/bundle/binaries/llama-server-aarch64-apple-darwin \
   --host 127.0.0.1 \
   --port 18081 \
-  --model "$PWD/local-assets/models/llama/gemma-4-E4B-it-UD-Q5_K_XL.gguf"
+  --model "$PWD/models/llama/default/model.gguf"
 ```
 
 ```bash
@@ -225,7 +225,7 @@ PYTHONPATH="$PWD/src-tauri/bundle/runtime/sherpa-onnx-vit" \
   --port 18082 \
   --provider cpu \
   --stt-model-family offline_int8 \
-  --model-dir "$PWD/local-assets/models/sherpa/gipformer-65M-rnnt" \
+  --model-dir "$PWD/models/stt/gipformer-65M-rnnt" \
   --postprocess-mode clean \
   --alias default-speech
 ```
@@ -234,7 +234,7 @@ PYTHONPATH="$PWD/src-tauri/bundle/runtime/sherpa-onnx-vit" \
 curl -fsS http://127.0.0.1:18082/health
 curl -fsS http://127.0.0.1:18082/v1/models
 curl -fsS -X POST http://127.0.0.1:18082/v1/audio/transcriptions \
-  -F file=@"$PWD/local-assets/audio/government-meeting-20s.wav" \
+  -F file=@"$PWD/models/audio/government-meeting-20s.wav" \
   -F model=default-speech
 ```
 
@@ -268,11 +268,11 @@ conn.execute("INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)", (
 conn.execute("INSERT OR REPLACE INTO app_settings (key, value) VALUES (?, ?)", ('machine_configured', 'true'))
 conn.execute(
     "UPDATE engine_profiles SET model_path=?, model_dir=NULL, tokens_path=NULL, status='stopped', pid=NULL, last_error=NULL, last_exit_code=NULL, updated_at=? WHERE id='language_engine'",
-    ('/Users/leakless/code/ai4pro-ailauncher/local-assets/models/llama/gemma-4-E4B-it-UD-Q5_K_XL.gguf', now),
+    ('/Users/leakless/code/ai4pro-ailauncher/models/llama/default/model.gguf', now),
 )
 conn.execute(
     "UPDATE engine_profiles SET model_path=NULL, model_dir=?, tokens_path=NULL, status='stopped', pid=NULL, last_error=NULL, last_exit_code=NULL, updated_at=? WHERE id='speech_engine'",
-    ('/Users/leakless/code/ai4pro-ailauncher/local-assets/models/sherpa/gipformer-65M-rnnt', now),
+    ('/Users/leakless/code/ai4pro-ailauncher/models/stt/gipformer-65M-rnnt', now),
 )
 conn.execute("UPDATE engine_runtime_state SET status='stopped', pid=NULL, last_error=NULL, last_exit_code=NULL, updated_at=?", (now,))
 conn.commit()
@@ -295,7 +295,7 @@ curl -fsS http://127.0.0.1:8080/v1/models
 curl -fsS http://127.0.0.1:6006/health
 curl -fsS http://127.0.0.1:6006/v1/models
 curl -fsS -X POST http://127.0.0.1:6006/v1/audio/transcriptions \
-  -F file=@"$PWD/local-assets/audio/government-meeting-20s.wav" \
+  -F file=@"$PWD/models/audio/government-meeting-20s.wav" \
   -F model=default-speech
 ```
 

@@ -45,7 +45,7 @@ What does **not** exist yet:
 - complete runtime reconciliation / crash recovery / graceful shutdown behavior
 - finished signing/notarization/installer flow
 
-See [docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md), [docs/FINISHING_IMPLEMENTATION.md](docs/FINISHING_IMPLEMENTATION.md), [docs/RELEASE.md](docs/RELEASE.md), and [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
+See [docs/RELEASE.md](docs/RELEASE.md) and [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ## Requirements
 
@@ -143,22 +143,30 @@ just tag-release 0.1.1
 
 ### Local real-asset testing
 
-The repo-local test asset convention is:
+All repo-local test assets live under `models/`:
 
 ```text
-local-assets/
-  models/
-    llama/*.gguf
-    sherpa/<model-dir>/
-  audio/*.wav
+models/
+  stt/
+    gipformer-65M-rnnt/
+    sherpa-onnx-zipformer-en-libriheavy-20230830-medium-punct-case/
+  vad/
+    silero_vad.onnx
+  llama/default/
+    model.gguf
+  audio/
+    government-meeting-20s.wav
+    government-meeting.wav
+    government-meeting.mp3
+  capu/
 ```
 
 The currently verified local assets are:
 
 ```text
-local-assets/models/llama/gemma-4-E4B-it-UD-Q5_K_XL.gguf
-local-assets/models/sherpa/gipformer-65M-rnnt
-local-assets/audio/government-meeting-20s.wav
+models/llama/default/model.gguf
+models/stt/gipformer-65M-rnnt
+models/audio/government-meeting-20s.wav
 ```
 
 For Developer Mode configuration, set only these model fields:
@@ -173,7 +181,7 @@ To test engines directly during development, use ports that do not conflict with
 ./src-tauri/bundle/binaries/llama-server-aarch64-apple-darwin \
   --host 127.0.0.1 \
   --port 18081 \
-  --model "$PWD/local-assets/models/llama/gemma-4-E4B-it-UD-Q5_K_XL.gguf"
+  --model "$PWD/models/llama/default/model.gguf"
 ```
 
 Then in another terminal:
@@ -193,7 +201,7 @@ PYTHONPATH="$PWD/src-tauri/bundle/runtime/sherpa-onnx-vit" \
   --port 18082 \
   --provider cpu \
   --stt-model-family offline_int8 \
-  --model-dir "$PWD/local-assets/models/sherpa/gipformer-65M-rnnt" \
+  --model-dir "$PWD/models/stt/gipformer-65M-rnnt" \
   --postprocess-mode clean \
   --alias default-speech
 ```
@@ -204,7 +212,7 @@ Then in another terminal:
 curl -fsS http://127.0.0.1:18082/health
 curl -fsS http://127.0.0.1:18082/v1/models
 curl -fsS -X POST http://127.0.0.1:18082/v1/audio/transcriptions \
-  -F file=@"$PWD/local-assets/audio/government-meeting-20s.wav" \
+  -F file=@"$PWD/models/audio/government-meeting-20s.wav" \
   -F model=default-speech
 ```
 
@@ -484,7 +492,5 @@ They do **not** yet fully implement machine provisioning from the plan.
 
 ## Recommended next read
 
-- [docs/IMPLEMENTATION_STATUS.md](docs/IMPLEMENTATION_STATUS.md)
-- [docs/FINISHING_IMPLEMENTATION.md](docs/FINISHING_IMPLEMENTATION.md)
 - [docs/RELEASE.md](docs/RELEASE.md)
 - [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)

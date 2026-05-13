@@ -25,7 +25,14 @@ impl AppPaths {
         let binaries_dir = app_root.join("binaries");
         let database_path = data_dir.join("local_ai.sqlite");
 
-        for path in [&app_root, &config_dir, &data_dir, &logs_dir, &models_dir, &binaries_dir] {
+        for path in [
+            &app_root,
+            &config_dir,
+            &data_dir,
+            &logs_dir,
+            &models_dir,
+            &binaries_dir,
+        ] {
             fs::create_dir_all(path)?;
         }
 

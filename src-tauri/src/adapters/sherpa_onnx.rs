@@ -3,6 +3,7 @@ use crate::app_paths::AppPaths;
 use crate::errors::{AppError, AppResult};
 use crate::models::{EngineKind, EngineProfileRecord};
 use crate::process_supervisor::LaunchSpec;
+use crate::sherpa_registry::resolved_models_config_path;
 use std::path::PathBuf;
 
 #[derive(Debug, Clone, Copy)]
@@ -83,6 +84,14 @@ impl EngineAdapter for SherpaOnnxAdapter {
             .get("modelBpeVocab")
             .and_then(|value| value.as_str())
             .unwrap_or("");
+        let models_config_path = resolved_models_config_path(&paths.app_root, profile)
+            .to_string_lossy()
+            .to_string();
+        let num_threads = runtime
+            .get("numThreads")
+            .and_then(|value| value.as_i64())
+            .unwrap_or(2)
+            .to_string();
 
         let binary_path = runtime_python_binary(paths, profile, self.binary_name());
         let module_name = runtime
@@ -103,14 +112,10 @@ impl EngineAdapter for SherpaOnnxAdapter {
                     serde_json::Value::String("{port}".to_string()),
                     serde_json::Value::String("--provider".to_string()),
                     serde_json::Value::String("{provider}".to_string()),
-                    serde_json::Value::String("--stt-model-family".to_string()),
-                    serde_json::Value::String("{sttModelFamily}".to_string()),
-                    serde_json::Value::String("--model-dir".to_string()),
-                    serde_json::Value::String("{modelDir}".to_string()),
-                    serde_json::Value::String("--postprocess-mode".to_string()),
-                    serde_json::Value::String("{postprocessMode}".to_string()),
-                    serde_json::Value::String("--alias".to_string()),
-                    serde_json::Value::String("{alias}".to_string()),
+                    serde_json::Value::String("--models-config".to_string()),
+                    serde_json::Value::String("{modelsConfigPath}".to_string()),
+                    serde_json::Value::String("--num-threads".to_string()),
+                    serde_json::Value::String("{numThreads}".to_string()),
                 ]
             });
 
@@ -131,6 +136,8 @@ impl EngineAdapter for SherpaOnnxAdapter {
                     .replace("{modelDecoder}", decoder)
                     .replace("{modelJoiner}", joiner)
                     .replace("{modelTokens}", &tokens)
+                    .replace("{modelsConfigPath}", &models_config_path)
+                    .replace("{numThreads}", &num_threads)
                     .replace("{modelBpeVocab}", bpe)
             })
             .collect::<Vec<_>>();
